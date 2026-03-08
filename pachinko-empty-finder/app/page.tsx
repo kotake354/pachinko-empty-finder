@@ -10,6 +10,12 @@ export default function Home() {
         <Link href="/machine" className="text-blue-500 hover:underline">
           機種一覧はこちら
         </Link>
+        <Link href="/area" className="text-blue-500 hover:underline">
+          エリアから探す
+        </Link>
+        <Link href="/hall" className="text-blue-500 hover:underline">
+          ホールから探す
+        </Link>
         <Link href="/post" className="text-blue-500 hover:underline">
           投稿ページへ
         </Link>
