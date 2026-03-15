@@ -5,6 +5,7 @@ import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, orderBy
 import { db } from "@/lib/firebase";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import VideoPlayer from "@/components/VideoPlayer";
 
 export default function PostDetail() {
     const params = useParams();
@@ -130,6 +131,11 @@ export default function PostDetail() {
         );
     }
 
+    // R2のベースURLを取得（末尾のスラッシュの有無を考慮）
+    const r2BaseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || '';
+    const baseUrlFormatted = r2BaseUrl.endsWith('/') ? r2BaseUrl : `${r2BaseUrl}/`;
+    const videoUrl = post?.videoFileName ? `${baseUrlFormatted}${post.videoFileName}` : null;
+
     return (
         <div className="container mx-auto px-4 py-12 max-w-3xl">
             <button
@@ -161,6 +167,19 @@ export default function PostDetail() {
                     </h1>
                     <p className="text-xl text-gray-500 mt-2">@ {post.hall}</p>
                 </div>
+
+                {/* 動画領域 */}
+                {videoUrl && (
+                    <div className="w-full aspect-video bg-black border-b border-gray-100">
+                        <VideoPlayer 
+                            src={videoUrl}
+                            controls={true}
+                            autoPlay={true}
+                            muted={true}
+                            loop={true}
+                        />
+                    </div>
+                )}
 
                 <div className="p-8">
                     <div className="prose prose-blue max-w-none">
