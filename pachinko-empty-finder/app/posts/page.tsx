@@ -80,20 +80,55 @@ export default function PostsPage() {
                                         </h3>
                                     </div>
                                     
-                                    {/* 動画プレイヤー領域 */}
+                                    {/* メディア表示領域 */}
                                     {videoUrl && (
-                                        <div className="w-full aspect-video bg-black rounded-lg overflow-hidden mb-4 relative z-10" onClick={(e) => {
-                                            // 動画内クリックで親(Link)への遷移を防ぐ場合は e.preventDefault() 等も可能だが
-                                            // プレイヤー全体のクリックで詳細に飛ぶ方が自然なためここではそのままに
+                                        <div className="w-full bg-black rounded-lg overflow-hidden mb-4 relative z-10" onClick={(e) => {
+                                            // メディア内クリックで親(Link)への遷移を防ぐ場合は e.preventDefault() 等も可能だが
+                                            // 全体のクリックで詳細に飛ぶ方が自然なためここではそのままに
                                         }}>
-                                            <VideoPlayer 
-                                                src={videoUrl}
-                                                controls={false} // 一覧ではコントロール非表示
-                                                autoPlay={true}
-                                                muted={true} // 一覧はミュート必須
-                                                loop={true}
-                                                className="rounded-lg"
-                                            />
+                                            {post.mediaType === 'video' ? (
+                                                <div className="aspect-video w-full">
+                                                    <VideoPlayer 
+                                                        src={videoUrl}
+                                                        controls={false} // 一覧ではコントロール非表示
+                                                        autoPlay={true}
+                                                        muted={true} // 一覧はミュート必須
+                                                        loop={true}
+                                                        className="rounded-lg"
+                                                    />
+                                                </div>
+                                            ) : post.mediaType === 'image' || !post.mediaType ? ( // 下位互換性のため !post.mediaType も画像として扱うか、またはファイル名で判定も可。今回は画像優先とする（または動画優先とするか？）
+                                                // 以前の投稿（mediaTypeがないもの）は主に動画だったので、動画としてフォールバックするのが安全かも。しかし今後は明確に判定。
+                                                // 拡張子で判定する簡単なフォールバックを実装
+                                                (() => {
+                                                    const isLikelyVideo = !post.mediaType && videoUrl.match(/\.(mp4|webm|ogg|mov)$/i);
+                                                    if (post.mediaType === 'image' || (!post.mediaType && !isLikelyVideo)) {
+                                                        return (
+                                                            <div className="w-full flex justify-center bg-gray-50 border border-gray-100 rounded-lg">
+                                                                <img 
+                                                                    src={videoUrl} 
+                                                                    alt={`${post.machine}の画像`}
+                                                                    className="rounded-lg max-h-64 object-contain"
+                                                                    loading="lazy"
+                                                                />
+                                                            </div>
+                                                        );
+                                                    } else {
+                                                        return (
+                                                            <div className="aspect-video w-full">
+                                                                <VideoPlayer 
+                                                                    src={videoUrl}
+                                                                    controls={false}
+                                                                    autoPlay={true}
+                                                                    muted={true}
+                                                                    loop={true}
+                                                                    className="rounded-lg"
+                                                                />
+                                                            </div>
+                                                        );
+                                                    }
+                                                })()
+                                            ) : null}
                                         </div>
                                     )}
 

@@ -16,6 +16,7 @@ export default function PostPage() {
     // 動画アップロード用のState
     const [videoFile, setVideoFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const [errorMsg, setErrorMsg] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
 
@@ -45,31 +46,59 @@ export default function PostPage() {
                 videoFileName = `vid_${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${extension}`;
 
                 // 2. 署名付きURL取得
+                const contentType = videoFile.type || 'application/octet-stream'; // MIMEタイプが不明な場合のフォールバック
                 const res = await fetch('/api/upload-url', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         fileName: videoFileName,
-                        contentType: videoFile.type,
+                        contentType: contentType,
                     }),
                 });
 
                 if (!res.ok) {
-                    throw new Error('アップロード用URLの取得に失敗しました。');
+                    let errMsg = 'アップロード用URLの取得に失敗しました。';
+                    try {
+                        const errJson = await res.json();
+                        errMsg += ` (${res.status}: ${errJson.error || JSON.stringify(errJson)})`;
+                    } catch {}
+                    console.error('upload-url API error:', res.status);
+                    throw new Error(errMsg);
                 }
 
-                const { uploadUrl } = await res.json();
+                // API側で生成されたユニークなファイル名を受け取る
+                const { uploadUrl, fileName: uniqueFileName } = await res.json();
+                
+                // Firestoreにはこのユニークな名前を保存する
+                videoFileName = uniqueFileName;
 
-                // 3. R2へPUTリクエスト
-                const uploadRes = await fetch(uploadUrl, {
-                    method: 'PUT',
-                    body: videoFile,
-                    headers: { 'Content-Type': videoFile.type },
+                // 3. R2へPUTリクエスト (XHRを使用して進捗を取得)
+                await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    
+                    xhr.upload.onprogress = (event) => {
+                        if (event.lengthComputable) {
+                            const percentComplete = Math.round((event.loaded / event.total) * 100);
+                            setUploadProgress(percentComplete);
+                        }
+                    };
+
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            resolve(xhr.response);
+                        } else {
+                            reject(new Error(`動画のアップロードに失敗しました (Status: ${xhr.status})`));
+                        }
+                    };
+
+                    xhr.onerror = () => {
+                        reject(new Error('動画のアップロード中にネットワークエラーが発生しました。'));
+                    };
+
+                    xhr.open('PUT', uploadUrl, true);
+                    xhr.setRequestHeader('Content-Type', videoFile.type);
+                    xhr.send(videoFile);
                 });
-
-                if (!uploadRes.ok) {
-                    throw new Error('動画のアップロードに失敗しました。');
-                }
             }
 
             // 4. Firestoreへ保存
@@ -78,9 +107,9 @@ export default function PostPage() {
                 machine,
                 comment,
                 type: selectedType,
-                videoFileName: videoFileName || null, // 動画がない場合は null
+                videoFileName: videoFileName || null, // 動画・画像がない場合は null
+                mediaType: videoFile?.type.startsWith('image/') ? 'image' : videoFile?.type.startsWith('video/') ? 'video' : null,
                 createdAt: serverTimestamp(),
-                // userId: 'dummy_user_123' // 必要に応じて認証ユーザーのIDを追加
             });
 
             setSuccessMsg("リアルタイム情報を共有しました！");
@@ -91,12 +120,14 @@ export default function PostPage() {
             setComment("");
             setSelectedType("据え置き");
             setVideoFile(null);
+            setUploadProgress(0);
             
         } catch (error: any) {
             console.error("Error adding document: ", error);
             setErrorMsg(error.message || "投稿に失敗しました");
         } finally {
             setIsUploading(false);
+            setUploadProgress(0);
         }
     };
 
@@ -195,48 +226,63 @@ export default function PostPage() {
                         />
                     </div>
 
-                    {/* 動画アップロード */}
+                    {/* メディアアップロード */}
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            動画ファイル (任意)
+                            画像・動画ファイル (任意)
                         </label>
                         <div className="w-full px-4 py-4 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors flex flex-col items-center justify-center cursor-pointer relative">
                             <input
                                 type="file"
-                                accept="video/*"
+                                accept="image/*,video/*"
                                 onChange={handleFileChange}
                                 disabled={isUploading}
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                             />
                             <div className="text-center pointer-events-none flex flex-col items-center justify-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" style={{ width: '32px', height: '32px' }} className="text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
                                 {videoFile ? (
                                     <span className="text-sm font-semibold text-blue-600">{videoFile.name} が選択されています</span>
                                 ) : (
-                                    <span className="text-sm text-gray-500">クリックして動画を選択、またはドラッグ＆ドロップ</span>
+                                    <span className="text-sm text-gray-500">クリックして画像・動画を選択、またはドラッグ＆ドロップ</span>
                                 )}
                             </div>
                         </div>
                     </div>
 
+
                     <button
                         onClick={handlePost}
                         disabled={isUploading}
-                        className="w-full py-4 mt-8 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-700 transform hover:-translate-y-0.5 transition-all active:scale-95 disabled:opacity-70 disabled:pointer-events-none flex justify-center items-center gap-2"
+                        className="relative w-full py-4 mt-8 overflow-hidden rounded-xl shadow-lg transition-all active:scale-95 disabled:pointer-events-none group"
                     >
-                        {isUploading ? (
-                            <>
-                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                アップロードして投稿中...
-                            </>
-                        ) : (
-                            '投稿する'
+                        {/* プログレスバー背景 */}
+                        {isUploading && (
+                            <div 
+                                className="absolute top-0 left-0 h-full bg-blue-500 transition-all duration-300 ease-out z-0"
+                                style={{ width: `${uploadProgress}%` }}
+                            />
                         )}
+                        
+                        {/* 通常時の背景 */}
+                        <div className={`absolute top-0 left-0 w-full h-full -z-10 transition-colors duration-300 ${isUploading ? 'bg-gray-200' : 'bg-gradient-to-r from-blue-600 to-indigo-600 group-hover:from-blue-700 group-hover:to-indigo-700'}`} />
+
+                        {/* テキストとアイコン */}
+                        <div className={`relative z-10 flex justify-center items-center gap-2 font-bold ${isUploading ? 'text-gray-900' : 'text-white'}`}>
+                            {isUploading ? (
+                                <>
+                                    <svg className="animate-spin h-5 w-5 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    送信中... ({uploadProgress}%)
+                                </>
+                            ) : (
+                                '投稿する'
+                            )}
+                        </div>
                     </button>
                     
                     {/* 一覧ページへのリンク（動作確認用などに） */}

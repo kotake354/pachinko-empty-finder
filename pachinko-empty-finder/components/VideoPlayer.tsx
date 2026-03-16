@@ -25,12 +25,28 @@ export default function VideoPlayer({
 
   // iOS Safari等でのインライン自動再生のための対策
   useEffect(() => {
-    if (autoPlay && videoRef.current) {
-      videoRef.current.play().catch((error) => {
+    const video = videoRef.current;
+    if (!video || !autoPlay) return;
+
+    // 動画のメタデータが読み込まれたら再生を開始する関数
+    const handleCanPlay = async () => {
+      try {
+        video.muted = muted; // 再度明示的にミュート
+        await video.play();
+      } catch (error) {
         console.error("動画の自動再生がブロックされました:", error);
-      });
+      }
+    };
+
+    // すでに準備ができていれば即実行、そうでなければイベントを待つ
+    if (video.readyState >= 3) {
+      handleCanPlay();
+    } else {
+      video.addEventListener('canplay', handleCanPlay);
     }
-  }, [autoPlay, src]);
+
+    return () => video.removeEventListener('canplay', handleCanPlay);
+  }, [autoPlay, muted, src]);
 
   return (
     <div className={`relative overflow-hidden ${className}`}>

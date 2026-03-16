@@ -20,6 +20,8 @@ export default function PostDetail() {
     const [comments, setComments] = useState<any[]>([]);
     const [newComment, setNewComment] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [commentFile, setCommentFile] = useState<File | null>(null);
 
     useEffect(() => {
         if (!id) return;
@@ -64,23 +66,92 @@ export default function PostDetail() {
         return () => unsubscribe();
     }, [id]);
 
+    const handleCommentFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setCommentFile(e.target.files[0]);
+        }
+    };
+
     const handleComment = async () => {
-        if (!newComment.trim()) return;
+        if (!newComment.trim() && !commentFile) return;
 
         setIsSubmitting(true);
         try {
+            let mediaFileName = '';
+
+            // ファイルが選択されている場合はR2へアップロード
+            if (commentFile) {
+                const extension = commentFile.name.split('.').pop();
+                const tempFileName = `comment_${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${extension}`;
+
+                const contentType = commentFile.type || 'application/octet-stream';
+                const res = await fetch('/api/upload-url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileName: tempFileName,
+                        contentType: contentType,
+                    }),
+                });
+
+                if (!res.ok) {
+                    let errMsg = 'アップロード用URLの取得に失敗しました。';
+                    try {
+                        const errJson = await res.json();
+                        errMsg += ` (${res.status}: ${errJson.error || JSON.stringify(errJson)})`;
+                    } catch {}
+                    console.error('upload-url API error:', res.status);
+                    throw new Error(errMsg);
+                }
+
+                const { uploadUrl, fileName: uniqueFileName } = await res.json();
+                mediaFileName = uniqueFileName;
+
+                const uploadRes = await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+
+                    xhr.upload.onprogress = (event) => {
+                        if (event.lengthComputable) {
+                            const percentComplete = Math.round((event.loaded / event.total) * 100);
+                            setUploadProgress(percentComplete);
+                        }
+                    };
+
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            resolve(xhr.response);
+                        } else {
+                            reject(new Error(`ファイルのアップロードに失敗しました (Status: ${xhr.status})`));
+                        }
+                    };
+
+                    xhr.onerror = () => {
+                        reject(new Error('ファイルのアップロード中にネットワークエラーが発生しました。'));
+                    };
+
+                    xhr.open('PUT', uploadUrl, true);
+                    xhr.setRequestHeader('Content-Type', commentFile.type);
+                    xhr.send(commentFile);
+                });
+            }
+
             await addDoc(collection(db, "comments"), {
                 postId: id,
                 comment: newComment,
                 userName: "匿名",
+                mediaFileName: mediaFileName || null,
+                mediaType: commentFile?.type.startsWith('image/') ? 'image' : commentFile?.type.startsWith('video/') ? 'video' : null,
                 createdAt: serverTimestamp()
             });
             setNewComment("");
+            setCommentFile(null);
+            setUploadProgress(0);
         } catch (error) {
             console.error("Error adding comment: ", error);
             alert("コメントの投稿に失敗しました");
         } finally {
             setIsSubmitting(false);
+            setUploadProgress(0);
         }
     };
 
@@ -168,16 +239,48 @@ export default function PostDetail() {
                     <p className="text-xl text-gray-500 mt-2">@ {post.hall}</p>
                 </div>
 
-                {/* 動画領域 */}
+                {/* メディア領域 */}
                 {videoUrl && (
-                    <div className="w-full aspect-video bg-black border-b border-gray-100">
-                        <VideoPlayer 
-                            src={videoUrl}
-                            controls={true}
-                            autoPlay={true}
-                            muted={true}
-                            loop={true}
-                        />
+                    <div className="w-full bg-black border-b border-gray-100">
+                        {post.mediaType === 'video' ? (
+                            <div className="aspect-video w-full">
+                                <VideoPlayer 
+                                    src={videoUrl}
+                                    controls={true}
+                                    autoPlay={true}
+                                    muted={true}
+                                    loop={true}
+                                />
+                            </div>
+                        ) : post.mediaType === 'image' || !post.mediaType ? (
+                            // 古いデータへのフォールバック対応
+                            (() => {
+                                const isLikelyVideo = !post.mediaType && videoUrl.match(/\.(mp4|webm|ogg|mov)$/i);
+                                if (post.mediaType === 'image' || (!post.mediaType && !isLikelyVideo)) {
+                                    return (
+                                        <div className="w-full flex justify-center bg-gray-50 p-4">
+                                            <img 
+                                                src={videoUrl} 
+                                                alt={`${post.machine}の画像`}
+                                                className="rounded-lg max-h-[60vh] object-contain shadow-sm"
+                                            />
+                                        </div>
+                                    );
+                                } else {
+                                    return (
+                                        <div className="aspect-video w-full">
+                                            <VideoPlayer 
+                                                src={videoUrl}
+                                                controls={true}
+                                                autoPlay={true}
+                                                muted={true}
+                                                loop={true}
+                                            />
+                                        </div>
+                                    );
+                                }
+                            })()
+                        ) : null}
                     </div>
                 )}
 
@@ -222,18 +325,71 @@ export default function PostDetail() {
                             value={newComment}
                             onChange={(e) => setNewComment(e.target.value)}
                             rows={2}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all bg-gray-50 resize-none h-24"
+                            disabled={isSubmitting}
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all bg-gray-50 resize-none h-24 disabled:opacity-50"
                         />
-                        <div className="flex justify-end">
+                        
+                        {/* メディアアップロード領域 */}
+                        <div className="w-full">
+                            <label className="block text-xs font-semibold text-gray-500 mb-1">
+                                画像・動画を添付 (任意)
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type="file"
+                                    accept="image/*,video/*"
+                                    onChange={handleCommentFileChange}
+                                    disabled={isSubmitting}
+                                    className="block w-full text-sm text-gray-500
+                                      file:mr-4 file:py-2 file:px-4
+                                      file:rounded-full file:border-0
+                                      file:text-sm file:font-semibold
+                                      file:bg-blue-50 file:text-blue-700
+                                      hover:file:bg-blue-100
+                                      disabled:opacity-50 cursor-pointer"
+                                />
+                                {commentFile && (
+                                    <button 
+                                        onClick={() => setCommentFile(null)}
+                                        className="absolute right-0 top-1 text-xs text-red-500 hover:text-red-700 px-2 py-1 bg-red-50 rounded-full"
+                                        disabled={isSubmitting}
+                                    >
+                                        クリア
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end mt-2">
                             <button
                                 onClick={handleComment}
-                                disabled={isSubmitting || !newComment.trim()}
-                                className={`px-6 py-2 rounded-xl font-bold transition-all ${isSubmitting || !newComment.trim()
-                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                    : "bg-blue-600 text-white shadow-md hover:shadow-lg hover:bg-blue-700 active:scale-95"
+                                disabled={isSubmitting || (!newComment.trim() && !commentFile)}
+                                className={`relative overflow-hidden px-6 py-2.5 rounded-xl font-bold transition-all ${isSubmitting || (!newComment.trim() && !commentFile)
+                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
+                                    : "bg-blue-600 text-white shadow-md hover:shadow-lg hover:bg-blue-700 active:scale-95 border border-transparent"
                                     }`}
                             >
-                                {isSubmitting ? "投稿中..." : "コメントを送信"}
+                                {/* プログレスバー背景（アップロード中のみ表示） */}
+                                {isSubmitting && commentFile && (
+                                    <div 
+                                        className="absolute top-0 left-0 h-full bg-blue-200/50 transition-all duration-300 ease-out z-0"
+                                        style={{ width: `${uploadProgress}%` }}
+                                    />
+                                )}
+                                
+                                <span className="relative z-10 flex items-center justify-center gap-2">
+                                    {isSubmitting ? (
+                                        <>
+                                            <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            {commentFile ? `送信中... (${uploadProgress}%)` : "送信中..."}
+                                        </>
+                                    ) : (
+                                        "コメントを送信"
+                                    )}
+                                </span>
                             </button>
                         </div>
                     </div>
@@ -242,7 +398,10 @@ export default function PostDetail() {
                         {comments.length === 0 ? (
                             <p className="text-center text-gray-400 py-8 italic">まだコメントがありません。最初のコメントを書いてみましょう！</p>
                         ) : (
-                            comments.map((c) => (
+                            comments.map((c) => {
+                                const commentMediaUrl = c.mediaFileName ? `${baseUrlFormatted}${c.mediaFileName}` : null;
+                                
+                                return (
                                 <div key={c.id} className="bg-gray-50 rounded-xl p-4 transition-all hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-100">
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">
@@ -262,9 +421,57 @@ export default function PostDetail() {
                                             </span>
                                         )}
                                     </div>
-                                    <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap pl-10 mb-3">
-                                        {c.comment}
-                                    </p>
+                                    
+                                    {/* コメントテキスト */}
+                                    {c.comment && (
+                                        <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap pl-10 mb-3">
+                                            {c.comment}
+                                        </p>
+                                    )}
+
+                                    {/* コメント画像・メディア領域 */}
+                                    {commentMediaUrl && (
+                                        <div className="pl-10 mb-3 max-w-sm">
+                                            {c.mediaType === 'video' ? (
+                                                <div className="rounded-lg overflow-hidden border border-gray-200">
+                                                    <VideoPlayer 
+                                                        src={commentMediaUrl}
+                                                        controls={true}
+                                                        autoPlay={true}
+                                                        muted={true}
+                                                        loop={true}
+                                                    />
+                                                </div>
+                                            ) : c.mediaType === 'image' || !c.mediaType ? (
+                                                (() => {
+                                                    const isLikelyVideo = !c.mediaType && commentMediaUrl.match(/\.(mp4|webm|ogg|mov)$/i);
+                                                    if (c.mediaType === 'image' || (!c.mediaType && !isLikelyVideo)) {
+                                                        return (
+                                                            <img 
+                                                                src={commentMediaUrl} 
+                                                                alt="コメント添付メディア" 
+                                                                className="rounded-lg border border-gray-200 max-h-60 object-contain bg-white"
+                                                                loading="lazy"
+                                                            />
+                                                        );
+                                                    } else {
+                                                        return (
+                                                            <div className="rounded-lg overflow-hidden border border-gray-200">
+                                                                <VideoPlayer 
+                                                                    src={commentMediaUrl}
+                                                                    controls={true}
+                                                                    autoPlay={true}
+                                                                    muted={true}
+                                                                    loop={true}
+                                                                />
+                                                            </div>
+                                                        );
+                                                    }
+                                                })()
+                                            ) : null}
+                                        </div>
+                                    )}
+
                                     <div className="pl-10">
                                         <button
                                             onClick={() => handleCommentLike(c.id)}
@@ -275,7 +482,7 @@ export default function PostDetail() {
                                         </button>
                                     </div>
                                 </div>
-                            ))
+                            )})
                         )}
                     </div>
                 </div>
