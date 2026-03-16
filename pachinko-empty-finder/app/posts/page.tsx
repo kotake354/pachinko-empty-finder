@@ -1,32 +1,90 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
+import { db, auth } from "@/lib/firebase";
+import { collection, onSnapshot, query, orderBy, where, getDocs, deleteDoc, doc } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 import Link from "next/link";
 import VideoPlayer from "@/components/VideoPlayer";
 
 export default function PostsPage() {
     const [posts, setPosts] = useState<any[]>([]);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState<string | null>(null); // 削除中のポストIDを保持
 
     useEffect(() => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+            setCurrentUserId(user ? user.uid : null);
+        });
+
         const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
+                id: doc.id, ...doc.data(),
             }));
 
             setPosts(data);
         });
 
-        return () => unsubscribe();
+        return () => {
+            unsubscribeAuth();
+            unsubscribe();
+        };
     }, []);
 
     // R2のベースURLを取得（末尾のスラッシュの有無を考慮）
     const r2BaseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || '';
     const baseUrlFormatted = r2BaseUrl.endsWith('/') ? r2BaseUrl : `${r2BaseUrl}/`;
+
+    const handleDeletePost = async (e: React.MouseEvent, post: any) => {
+        e.preventDefault(); // 親の Link への遷移を防止
+        e.stopPropagation();
+
+        if (!confirm(`「${post.machine}」の投稿を削除しますか？\nコメントとメディアファイルも一緒に削除されます。`)) return;
+
+        setIsDeleting(post.id);
+        try {
+            // 1. 投稿のメディアファイルをR2から削除
+            if (post.videoFileName) {
+                await fetch('/api/delete-media', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fileName: post.videoFileName }),
+                });
+            }
+
+            // 2. 関連コメントを取得してすべて削除（コメントのメディアも含む）
+            const commentsQuery = query(
+                collection(db, "comments"),
+                where("postId", "==", post.id)
+            );
+            const commentsSnap = await getDocs(commentsQuery);
+
+            const commentDeletePromises = commentsSnap.docs.map(async (commentDoc) => {
+                const commentData = commentDoc.data();
+                if (commentData.mediaFileName) {
+                    await fetch('/api/delete-media', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ fileName: commentData.mediaFileName }),
+                    });
+                }
+                await deleteDoc(doc(db, "comments", commentDoc.id));
+            });
+            await Promise.all(commentDeletePromises);
+
+            // 3. 投稿のFirestoreドキュメントを削除
+            await deleteDoc(doc(db, "posts", post.id));
+
+            alert("削除が完了しました");
+        } catch (error) {
+            console.error("Error deleting post:", error);
+            alert("削除に失敗しました。もう一度お試しください。");
+        } finally {
+            setIsDeleting(null);
+        }
+    };
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -56,22 +114,46 @@ export default function PostsPage() {
                             >
                                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 group-hover:shadow-md group-hover:border-blue-200 transition-all duration-200 cursor-pointer h-full">
                                     <div className="flex items-start justify-between mb-2">
-                                        {post.type && (
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
-                                                {post.type}
-                                            </span>
-                                        )}
-                                        {post.createdAt && (
-                                            <span className="text-xs text-gray-400 font-mono">
-                                                {new Date(post.createdAt.seconds * 1000).toLocaleString("ja-JP", {
-                                                    year: "numeric",
-                                                    month: "2-digit",
-                                                    day: "2-digit",
-                                                    hour: "2-digit",
-                                                    minute: "2-digit"
-                                                })}
-                                            </span>
-                                        )}
+                                        <div className="flex items-center gap-2">
+                                            {post.type && (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                                                    {post.type}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            {post.createdAt && (
+                                                <span className="text-xs text-gray-400 font-mono">
+                                                    {new Date(post.createdAt.seconds * 1000).toLocaleString("ja-JP", {
+                                                        year: "numeric",
+                                                        month: "2-digit",
+                                                        day: "2-digit",
+                                                        hour: "2-digit",
+                                                        minute: "2-digit"
+                                                    })}
+                                                </span>
+                                            )}
+                                            {/* 削除ボタン（自分の投稿のみ表示） */}
+                                            {currentUserId && post.userId === currentUserId && (
+                                                <button
+                                                    onClick={(e) => handleDeletePost(e, post)}
+                                                    disabled={isDeleting === post.id}
+                                                    title="この投稿を削除する"
+                                                    className="p-1.5 rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all z-20"
+                                                >
+                                                    {isDeleting === post.id ? (
+                                                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        </svg>
+                                                    ) : (
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    )}
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div className="mb-4">

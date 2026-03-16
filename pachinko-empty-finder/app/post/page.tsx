@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import Link from 'next/link';
 
@@ -12,7 +12,7 @@ export default function PostPage() {
     const [machine, setMachine] = useState("");
     const [comment, setComment] = useState("");
     const [selectedType, setSelectedType] = useState("据え置き");
-    
+
     // 動画アップロード用のState
     const [videoFile, setVideoFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -61,21 +61,21 @@ export default function PostPage() {
                     try {
                         const errJson = await res.json();
                         errMsg += ` (${res.status}: ${errJson.error || JSON.stringify(errJson)})`;
-                    } catch {}
+                    } catch { }
                     console.error('upload-url API error:', res.status);
                     throw new Error(errMsg);
                 }
 
                 // API側で生成されたユニークなファイル名を受け取る
                 const { uploadUrl, fileName: uniqueFileName } = await res.json();
-                
+
                 // Firestoreにはこのユニークな名前を保存する
                 videoFileName = uniqueFileName;
 
                 // 3. R2へPUTリクエスト (XHRを使用して進捗を取得)
                 await new Promise((resolve, reject) => {
                     const xhr = new XMLHttpRequest();
-                    
+
                     xhr.upload.onprogress = (event) => {
                         if (event.lengthComputable) {
                             const percentComplete = Math.round((event.loaded / event.total) * 100);
@@ -102,6 +102,10 @@ export default function PostPage() {
             }
 
             // 4. Firestoreへ保存
+            if (!auth.currentUser) {
+                throw new Error("ログインユーザーが見つかりません。ページを再読み込みしてください。");
+            }
+
             await addDoc(collection(db, "posts"), {
                 hall,
                 machine,
@@ -110,10 +114,11 @@ export default function PostPage() {
                 videoFileName: videoFileName || null, // 動画・画像がない場合は null
                 mediaType: videoFile?.type.startsWith('image/') ? 'image' : videoFile?.type.startsWith('video/') ? 'video' : null,
                 createdAt: serverTimestamp(),
+                userId: auth.currentUser.uid
             });
 
             setSuccessMsg("リアルタイム情報を共有しました！");
-            
+
             // フォームリセット
             setHall("");
             setMachine("");
@@ -121,7 +126,7 @@ export default function PostPage() {
             setSelectedType("据え置き");
             setVideoFile(null);
             setUploadProgress(0);
-            
+
         } catch (error: any) {
             console.error("Error adding document: ", error);
             setErrorMsg(error.message || "投稿に失敗しました");
@@ -148,7 +153,7 @@ export default function PostPage() {
                         {errorMsg}
                     </div>
                 )}
-                
+
                 {successMsg && (
                     <div className="mb-6 p-4 bg-green-50 text-green-700 border border-green-200 rounded-xl text-sm font-medium">
                         {successMsg}
@@ -168,8 +173,8 @@ export default function PostPage() {
                                     onClick={() => setSelectedType(t)}
                                     disabled={isUploading}
                                     className={`px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 flex items-center gap-1.5 border-2 ${selectedType === t
-                                            ? "bg-orange-500 text-white border-orange-500 shadow-md transform scale-105 ring-4 ring-orange-100 opacity-100"
-                                            : "bg-white text-gray-400 border-gray-100 opacity-70 hover:opacity-100 hover:border-gray-300 hover:text-gray-500"
+                                        ? "bg-orange-500 text-white border-orange-500 shadow-md transform scale-105 ring-4 ring-orange-100 opacity-100"
+                                        : "bg-white text-gray-400 border-gray-100 opacity-70 hover:opacity-100 hover:border-gray-300 hover:text-gray-500"
                                         }`}
                                 >
                                     {selectedType === t && (
@@ -260,12 +265,12 @@ export default function PostPage() {
                     >
                         {/* プログレスバー背景 */}
                         {isUploading && (
-                            <div 
+                            <div
                                 className="absolute top-0 left-0 h-full bg-blue-500 transition-all duration-300 ease-out z-0"
                                 style={{ width: `${uploadProgress}%` }}
                             />
                         )}
-                        
+
                         {/* 通常時の背景 */}
                         <div className={`absolute top-0 left-0 w-full h-full -z-10 transition-colors duration-300 ${isUploading ? 'bg-gray-200' : 'bg-gradient-to-r from-blue-600 to-indigo-600 group-hover:from-blue-700 group-hover:to-indigo-700'}`} />
 
@@ -284,7 +289,7 @@ export default function PostPage() {
                             )}
                         </div>
                     </button>
-                    
+
                     {/* 一覧ページへのリンク（動作確認用などに） */}
                     <div className="text-center mt-4">
                         <Link href="/" className="text-sm text-blue-500 hover:underline">

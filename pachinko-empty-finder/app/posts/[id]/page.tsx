@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, orderBy, onSnapshot, updateDoc, increment } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, orderBy, onSnapshot, updateDoc, increment, deleteDoc, getDocs } from "firebase/firestore";
+import { db, auth } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import VideoPlayer from "@/components/VideoPlayer";
@@ -15,6 +16,8 @@ export default function PostDetail() {
     const [post, setPost] = useState<any>(null);
     const [likes, setLikes] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // コメント用のステート
     const [comments, setComments] = useState<any[]>([]);
@@ -26,6 +29,11 @@ export default function PostDetail() {
     useEffect(() => {
         if (!id) return;
 
+        // ログイン状態の監視
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+            setCurrentUserId(user ? user.uid : null);
+        });
+
         // 投稿データの取得
         const fetchPost = async () => {
             try {
@@ -33,7 +41,7 @@ export default function PostDetail() {
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
-                    const data = docSnap.data();
+                    const data = { id: docSnap.id, ...docSnap.data() } as any;
                     setPost(data);
                     setLikes(data.likes || 0);
                 } else {
@@ -63,12 +71,62 @@ export default function PostDetail() {
             setComments(list);
         });
 
-        return () => unsubscribe();
+        return () => {
+            unsubscribeAuth();
+            unsubscribe();
+        };
     }, [id]);
 
     const handleCommentFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             setCommentFile(e.target.files[0]);
+        }
+    };
+
+    const handleDeletePost = async () => {
+        if (!id || !post) return;
+        if (!confirm(`「${post.machine}」の投稿を削除しますか？\nコメントとメディアファイルも一緒に削除されます。`)) return;
+
+        setIsDeleting(true);
+        try {
+            // 1. 投稿のメディアファイルをR2から削除
+            if (post.videoFileName) {
+                await fetch('/api/delete-media', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fileName: post.videoFileName }),
+                });
+            }
+
+            // 2. 関連コメントを取得してすべて削除（コメントのメディアも含む）
+            const commentsQuery = query(
+                collection(db, "comments"),
+                where("postId", "==", id)
+            );
+            const commentsSnap = await getDocs(commentsQuery);
+
+            const commentDeletePromises = commentsSnap.docs.map(async (commentDoc) => {
+                const commentData = commentDoc.data();
+                if (commentData.mediaFileName) {
+                    await fetch('/api/delete-media', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ fileName: commentData.mediaFileName }),
+                    });
+                }
+                await deleteDoc(doc(db, "comments", commentDoc.id));
+            });
+            await Promise.all(commentDeletePromises);
+
+            // 3. 投稿のFirestoreドキュメントを削除
+            await deleteDoc(doc(db, "posts", id));
+
+            // 4. 一覧ページへリダイレクト
+            router.push('/posts');
+        } catch (error) {
+            console.error("Error deleting post:", error);
+            alert("削除に失敗しました。もう一度お試しください。");
+            setIsDeleting(false);
         }
     };
 
@@ -99,7 +157,7 @@ export default function PostDetail() {
                     try {
                         const errJson = await res.json();
                         errMsg += ` (${res.status}: ${errJson.error || JSON.stringify(errJson)})`;
-                    } catch {}
+                    } catch { }
                     console.error('upload-url API error:', res.status);
                     throw new Error(errMsg);
                 }
@@ -141,7 +199,8 @@ export default function PostDetail() {
                 userName: "匿名",
                 mediaFileName: mediaFileName || null,
                 mediaType: commentFile?.type.startsWith('image/') ? 'image' : commentFile?.type.startsWith('video/') ? 'video' : null,
-                createdAt: serverTimestamp()
+                createdAt: serverTimestamp(),
+                userId: auth.currentUser?.uid || null
             });
             setNewComment("");
             setCommentFile(null);
@@ -222,16 +281,40 @@ export default function PostDetail() {
             <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden mb-8">
                 <div className="p-8 border-b border-gray-50 bg-gray-50/30">
                     <div className="flex items-start justify-between mb-4">
-                        {post.type && (
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 shadow-sm">
-                                {post.type}
-                            </span>
-                        )}
-                        {post.createdAt && (
-                            <span className="text-xs text-gray-400 font-mono">
-                                {new Date(post.createdAt.seconds * 1000).toLocaleString("ja-JP")}
-                            </span>
-                        )}
+                        <div className="flex items-center gap-2">
+                            {post.type && (
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 shadow-sm">
+                                    {post.type}
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                            {post.createdAt && (
+                                <span className="text-xs text-gray-400 font-mono">
+                                    {new Date(post.createdAt.seconds * 1000).toLocaleString("ja-JP")}
+                                </span>
+                            )}
+                            {/* 削除ボタン（自分の投稿のみ表示） */}
+                            {currentUserId && post.userId === currentUserId && (
+                                <button
+                                    onClick={handleDeletePost}
+                                    disabled={isDeleting}
+                                    title="この投稿を削除する"
+                                    className="p-2 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all disabled:opacity-50"
+                                >
+                                    {isDeleting ? (
+                                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    ) : (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    )}
+                                </button>
+                            )}
+                        </div>
                     </div>
                     <h1 className="text-3xl font-bold text-gray-900 leading-tight">
                         {post.machine}
@@ -244,7 +327,7 @@ export default function PostDetail() {
                     <div className="w-full bg-black border-b border-gray-100">
                         {post.mediaType === 'video' ? (
                             <div className="aspect-video w-full">
-                                <VideoPlayer 
+                                <VideoPlayer
                                     src={videoUrl}
                                     controls={true}
                                     autoPlay={true}
@@ -259,8 +342,8 @@ export default function PostDetail() {
                                 if (post.mediaType === 'image' || (!post.mediaType && !isLikelyVideo)) {
                                     return (
                                         <div className="w-full flex justify-center bg-gray-50 p-4">
-                                            <img 
-                                                src={videoUrl} 
+                                            <img
+                                                src={videoUrl}
                                                 alt={`${post.machine}の画像`}
                                                 className="rounded-lg max-h-[60vh] object-contain shadow-sm"
                                             />
@@ -269,7 +352,7 @@ export default function PostDetail() {
                                 } else {
                                     return (
                                         <div className="aspect-video w-full">
-                                            <VideoPlayer 
+                                            <VideoPlayer
                                                 src={videoUrl}
                                                 controls={true}
                                                 autoPlay={true}
@@ -328,7 +411,7 @@ export default function PostDetail() {
                             disabled={isSubmitting}
                             className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all bg-gray-50 resize-none h-24 disabled:opacity-50"
                         />
-                        
+
                         {/* メディアアップロード領域 */}
                         <div className="w-full">
                             <label className="block text-xs font-semibold text-gray-500 mb-1">
@@ -349,7 +432,7 @@ export default function PostDetail() {
                                       disabled:opacity-50 cursor-pointer"
                                 />
                                 {commentFile && (
-                                    <button 
+                                    <button
                                         onClick={() => setCommentFile(null)}
                                         className="absolute right-0 top-1 text-xs text-red-500 hover:text-red-700 px-2 py-1 bg-red-50 rounded-full"
                                         disabled={isSubmitting}
@@ -371,12 +454,12 @@ export default function PostDetail() {
                             >
                                 {/* プログレスバー背景（アップロード中のみ表示） */}
                                 {isSubmitting && commentFile && (
-                                    <div 
+                                    <div
                                         className="absolute top-0 left-0 h-full bg-blue-200/50 transition-all duration-300 ease-out z-0"
                                         style={{ width: `${uploadProgress}%` }}
                                     />
                                 )}
-                                
+
                                 <span className="relative z-10 flex items-center justify-center gap-2">
                                     {isSubmitting ? (
                                         <>
@@ -400,89 +483,90 @@ export default function PostDetail() {
                         ) : (
                             comments.map((c) => {
                                 const commentMediaUrl = c.mediaFileName ? `${baseUrlFormatted}${c.mediaFileName}` : null;
-                                
+
                                 return (
-                                <div key={c.id} className="bg-gray-50 rounded-xl p-4 transition-all hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-100">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-xs font-bold">
-                                                {c.userName?.[0] || "?"}
-                                            </div>
-                                            <span className="font-bold text-gray-700 text-sm">{c.userName}</span>
-                                        </div>
-                                        {c.createdAt && (
-                                            <span className="text-[10px] text-gray-400 font-mono">
-                                                {new Date(c.createdAt.seconds * 1000).toLocaleString("ja-JP", {
-                                                    month: "2-digit",
-                                                    day: "2-digit",
-                                                    hour: "2-digit",
-                                                    minute: "2-digit"
-                                                })}
-                                            </span>
-                                        )}
-                                    </div>
-                                    
-                                    {/* コメントテキスト */}
-                                    {c.comment && (
-                                        <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap pl-10 mb-3">
-                                            {c.comment}
-                                        </p>
-                                    )}
-
-                                    {/* コメント画像・メディア領域 */}
-                                    {commentMediaUrl && (
-                                        <div className="pl-10 mb-3 max-w-sm">
-                                            {c.mediaType === 'video' ? (
-                                                <div className="rounded-lg overflow-hidden border border-gray-200">
-                                                    <VideoPlayer 
-                                                        src={commentMediaUrl}
-                                                        controls={true}
-                                                        autoPlay={true}
-                                                        muted={true}
-                                                        loop={true}
-                                                    />
+                                    <div key={c.id} className="bg-gray-50 rounded-xl p-4 transition-all hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-100">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-xs font-bold">
+                                                    {c.userName?.[0] || "?"}
                                                 </div>
-                                            ) : c.mediaType === 'image' || !c.mediaType ? (
-                                                (() => {
-                                                    const isLikelyVideo = !c.mediaType && commentMediaUrl.match(/\.(mp4|webm|ogg|mov)$/i);
-                                                    if (c.mediaType === 'image' || (!c.mediaType && !isLikelyVideo)) {
-                                                        return (
-                                                            <img 
-                                                                src={commentMediaUrl} 
-                                                                alt="コメント添付メディア" 
-                                                                className="rounded-lg border border-gray-200 max-h-60 object-contain bg-white"
-                                                                loading="lazy"
-                                                            />
-                                                        );
-                                                    } else {
-                                                        return (
-                                                            <div className="rounded-lg overflow-hidden border border-gray-200">
-                                                                <VideoPlayer 
-                                                                    src={commentMediaUrl}
-                                                                    controls={true}
-                                                                    autoPlay={true}
-                                                                    muted={true}
-                                                                    loop={true}
-                                                                />
-                                                            </div>
-                                                        );
-                                                    }
-                                                })()
-                                            ) : null}
+                                                <span className="font-bold text-gray-700 text-sm">{c.userName}</span>
+                                            </div>
+                                            {c.createdAt && (
+                                                <span className="text-[10px] text-gray-400 font-mono">
+                                                    {new Date(c.createdAt.seconds * 1000).toLocaleString("ja-JP", {
+                                                        month: "2-digit",
+                                                        day: "2-digit",
+                                                        hour: "2-digit",
+                                                        minute: "2-digit"
+                                                    })}
+                                                </span>
+                                            )}
                                         </div>
-                                    )}
 
-                                    <div className="pl-10">
-                                        <button
-                                            onClick={() => handleCommentLike(c.id)}
-                                            className="flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-pink-50 text-gray-500 hover:text-pink-600 rounded-full border border-gray-100 hover:border-pink-100 transition-all active:scale-95 shadow-sm text-xs font-bold group"
-                                        >
-                                            <span className="group-hover:animate-bounce">👍</span>
-                                            <span>{c.likes || 0}</span>
-                                        </button>
+                                        {/* コメントテキスト */}
+                                        {c.comment && (
+                                            <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap pl-10 mb-3">
+                                                {c.comment}
+                                            </p>
+                                        )}
+
+                                        {/* コメント画像・メディア領域 */}
+                                        {commentMediaUrl && (
+                                            <div className="pl-10 mb-3 max-w-sm">
+                                                {c.mediaType === 'video' ? (
+                                                    <div className="rounded-lg overflow-hidden border border-gray-200">
+                                                        <VideoPlayer
+                                                            src={commentMediaUrl}
+                                                            controls={true}
+                                                            autoPlay={true}
+                                                            muted={true}
+                                                            loop={true}
+                                                        />
+                                                    </div>
+                                                ) : c.mediaType === 'image' || !c.mediaType ? (
+                                                    (() => {
+                                                        const isLikelyVideo = !c.mediaType && commentMediaUrl.match(/\.(mp4|webm|ogg|mov)$/i);
+                                                        if (c.mediaType === 'image' || (!c.mediaType && !isLikelyVideo)) {
+                                                            return (
+                                                                <img
+                                                                    src={commentMediaUrl}
+                                                                    alt="コメント添付メディア"
+                                                                    className="rounded-lg border border-gray-200 max-h-60 object-contain bg-white"
+                                                                    loading="lazy"
+                                                                />
+                                                            );
+                                                        } else {
+                                                            return (
+                                                                <div className="rounded-lg overflow-hidden border border-gray-200">
+                                                                    <VideoPlayer
+                                                                        src={commentMediaUrl}
+                                                                        controls={true}
+                                                                        autoPlay={true}
+                                                                        muted={true}
+                                                                        loop={true}
+                                                                    />
+                                                                </div>
+                                                            );
+                                                        }
+                                                    })()
+                                                ) : null}
+                                            </div>
+                                        )}
+
+                                        <div className="pl-10">
+                                            <button
+                                                onClick={() => handleCommentLike(c.id)}
+                                                className="flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-pink-50 text-gray-500 hover:text-pink-600 rounded-full border border-gray-100 hover:border-pink-100 transition-all active:scale-95 shadow-sm text-xs font-bold group"
+                                            >
+                                                <span className="group-hover:animate-bounce">👍</span>
+                                                <span>{c.likes || 0}</span>
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            )})
+                                )
+                            })
                         )}
                     </div>
                 </div>
