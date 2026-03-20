@@ -8,7 +8,6 @@ import Link from 'next/link';
 const POST_TYPES = ["据え置き", "イベント", "回収", "爆出し", "今日どうだった", "明日どうする", "暇つぶし"];
 
 export default function PostPage() {
-    const [hall, setHall] = useState("");
     const [machine, setMachine] = useState("");
     const [comment, setComment] = useState("");
     const [selectedType, setSelectedType] = useState("据え置き");
@@ -27,8 +26,13 @@ export default function PostPage() {
     };
 
     const handlePost = async () => {
-        if (!hall || !machine) {
-            setErrorMsg("店舗名と台情報を入力してください");
+        if (!machine) {
+            setErrorMsg("台情報を入力してください");
+            return;
+        }
+
+        if (comment.length > 200) {
+            setErrorMsg("コメントは200文字以内で入力してください");
             return;
         }
 
@@ -107,7 +111,6 @@ export default function PostPage() {
             }
 
             await addDoc(collection(db, "posts"), {
-                hall,
                 machine,
                 comment,
                 type: selectedType,
@@ -120,7 +123,6 @@ export default function PostPage() {
             setSuccessMsg("リアルタイム情報を共有しました！");
 
             // フォームリセット
-            setHall("");
             setMachine("");
             setComment("");
             setSelectedType("据え置き");
@@ -188,19 +190,6 @@ export default function PostPage() {
                         </div>
                     </div>
 
-                    {/* 店舗名 */}
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            店舗名 <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            placeholder="例: マルハン新宿店"
-                            value={hall}
-                            onChange={(e) => setHall(e.target.value)}
-                            disabled={isUploading}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-gray-50"
-                        />
-                    </div>
 
                     {/* 機種名 */}
                     <div>
@@ -226,9 +215,15 @@ export default function PostPage() {
                             value={comment}
                             onChange={(e) => setComment(e.target.value)}
                             rows={4}
+                            maxLength={200}
                             disabled={isUploading}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-gray-50 resize-none"
+                            className={`w-full px-4 py-3 rounded-xl border focus:ring-2 outline-none transition-all bg-gray-50 resize-none ${
+                                comment.length > 200 ? "border-red-500 focus:ring-red-200" : "border-gray-200 focus:border-blue-500 focus:ring-blue-200"
+                            }`}
                         />
+                        <div className={`text-right text-xs mt-1 font-medium ${comment.length >= 200 ? "text-red-500" : "text-gray-400"}`}>
+                            {comment.length} / 200
+                        </div>
                     </div>
 
                     {/* メディアアップロード */}

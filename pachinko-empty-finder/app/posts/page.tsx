@@ -6,7 +6,7 @@ import { collection, onSnapshot, query, orderBy, where, getDocs, deleteDoc, doc 
 import { onAuthStateChanged } from "firebase/auth";
 import Link from "next/link";
 import VideoPlayer from "@/components/VideoPlayer";
-import { TrashIcon } from '@heroicons/react/24/outline';
+
 
 export default function PostsPage() {
     const [posts, setPosts] = useState<any[]>([]);
@@ -139,7 +139,7 @@ export default function PostsPage() {
                                                             onClick={(e) => handleDeletePost(e, post)}
                                                             disabled={isDeleting === post.id}
                                                             title="この投稿を削除する"
-                                                            className="text-gray-400 hover:text-red-500 transition-colors duration-200 p-1 rounded-full hover:bg-red-50 z-20"
+                                                            className="ml-2 bg-transparent border-none outline-none text-red-600 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-full transition-all duration-200 shadow-sm z-20"
                                                         >
                                                             {isDeleting === post.id ? (
                                                                 <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -147,7 +147,18 @@ export default function PostsPage() {
                                                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                                 </svg>
                                                             ) : (
-                                                                <TrashIcon className="w-4 h-4" />
+                                                                /* 生のSVG（ゴミ箱）を直接記述 + インラインスタイルで確実に表示 */
+                                                                <svg 
+                                                                    xmlns="http://www.w3.org/2000/svg" 
+                                                                    fill="none" 
+                                                                    viewBox="0 0 24 24" 
+                                                                    strokeWidth="1.5" 
+                                                                    stroke="currentColor" 
+                                                                    className="w-5 h-5"
+                                                                    style={{ width: '20px', height: '20px', color: '#dc2626' }}
+                                                                >
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                                                </svg>
                                                             )}
                                                         </button>
                                                     )}
@@ -158,11 +169,12 @@ export default function PostsPage() {
 
                                     <div className="mb-4">
                                         <h3 className="text-xl font-bold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">
-                                            {post.machine} <span className="text-base font-normal text-gray-500">@ {post.hall}</span>
+                                            {post.machine}
                                         </h3>
                                     </div>
 
                                     {(() => {
+                                        if (!videoUrl) return null;
                                         const fileName = post.videoFileName?.toLowerCase() || '';
                                         const isImage = fileName.endsWith('.heic') ||
                                             fileName.endsWith('.jpg') ||
@@ -171,21 +183,25 @@ export default function PostsPage() {
                                             fileName.endsWith('.webp') ||
                                             post.mediaType === 'image';
 
-                                        const currentMediaUrl = videoUrl || '';
+                                        const currentMediaUrl = videoUrl;
                                         if (isImage) {
                                             return (
                                                 <div className="w-full flex justify-center bg-gray-50 border border-gray-100 rounded-lg relative z-10">
-                                                    <img
-                                                        src={currentMediaUrl}
-                                                        alt={`${post.machine}の画像`}
-                                                        className="rounded-lg max-h-64 object-contain shadow-sm"
-                                                        loading="lazy"
-                                                    />
+                                                        <img
+                                                            src={currentMediaUrl}
+                                                            alt={`${post.machine}の画像`}
+                                                            className="rounded-lg max-h-32 object-contain shadow-sm"
+                                                            style={{ maxHeight: '128px' }}
+                                                            loading="lazy"
+                                                        />
                                                 </div>
                                             );
                                         } else {
                                             return (
-                                                <div className="w-full bg-black rounded-lg overflow-hidden mb-4 relative z-10">
+                                                <div 
+                                                    className="w-full max-w-[300px] mx-auto bg-black rounded-lg overflow-hidden mb-4 relative z-10"
+                                                    style={{ maxWidth: '300px' }}
+                                                >
                                                     <div className="aspect-video w-full">
                                                         <VideoPlayer
                                                             src={currentMediaUrl}

@@ -21,6 +21,7 @@ export default function VideoPlayer({
   className = '',
   poster,
 }: VideoPlayerProps) {
+  if (!src) return null;
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // iOS Safari等でのインライン自動再生のための対策

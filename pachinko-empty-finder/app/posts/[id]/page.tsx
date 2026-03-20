@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, orderBy, onSnapshot, updateDoc, increment, deleteDoc, getDocs } from "firebase/firestore";
+import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, orderBy, onSnapshot, updateDoc, increment, deleteDoc, getDocs, arrayUnion, arrayRemove } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import VideoPlayer from "@/components/VideoPlayer";
-import { TrashIcon } from '@heroicons/react/24/outline';
+
 
 export default function PostDetail() {
     const params = useParams();
@@ -154,6 +154,10 @@ export default function PostDetail() {
 
     const handleComment = async () => {
         if (!newComment.trim() && !commentFile) return;
+        if (newComment.length > 200) {
+            alert("コメントは200文字以内で入力してください");
+            return;
+        }
 
         setIsSubmitting(true);
         try {
@@ -241,27 +245,67 @@ export default function PostDetail() {
     };
 
     const handleLike = async () => {
-        if (!id) return;
+        if (!id || !currentUserId) {
+            if (!currentUserId) alert("いいねするにはログインが必要です");
+            return;
+        }
 
         try {
             const ref = doc(db, "posts", id);
-            await updateDoc(ref, {
-                likes: increment(1)
-            });
-            setLikes(prev => prev + 1);
+            const isLiked = post?.likedBy?.includes(currentUserId);
+
+            if (isLiked) {
+                // すでにいいねしている場合は解除
+                await updateDoc(ref, {
+                    likes: increment(-1),
+                    likedBy: arrayRemove(currentUserId)
+                });
+                setLikes(prev => prev - 1);
+                setPost((prev: any) => ({
+                    ...prev,
+                    likedBy: prev.likedBy.filter((uid: string) => uid !== currentUserId)
+                }));
+            } else {
+                // 未いいねの場合は追加
+                await updateDoc(ref, {
+                    likes: increment(1),
+                    likedBy: arrayUnion(currentUserId)
+                });
+                setLikes(prev => prev + 1);
+                setPost((prev: any) => ({
+                    ...prev,
+                    likedBy: [...(prev.likedBy || []), currentUserId]
+                }));
+            }
         } catch (error) {
-            console.error("Error tipping: ", error);
+            console.error("Error toggling like: ", error);
         }
     };
 
     const handleCommentLike = async (commentId: string) => {
+        if (!currentUserId) {
+            alert("いいねするにはログインが必要です");
+            return;
+        }
+
         try {
+            const comment = comments.find(c => c.id === commentId);
+            const isLiked = comment?.likedBy?.includes(currentUserId);
             const ref = doc(db, "comments", commentId);
-            await updateDoc(ref, {
-                likes: increment(1)
-            });
+
+            if (isLiked) {
+                await updateDoc(ref, {
+                    likes: increment(-1),
+                    likedBy: arrayRemove(currentUserId)
+                });
+            } else {
+                await updateDoc(ref, {
+                    likes: increment(1),
+                    likedBy: arrayUnion(currentUserId)
+                });
+            }
         } catch (error) {
-            console.error("Error liking comment: ", error);
+            console.error("Error toggling comment like: ", error);
         }
     };
 
@@ -336,7 +380,7 @@ export default function PostDetail() {
                                             onClick={handleDeletePost}
                                             disabled={isDeleting}
                                             title="この投稿を削除する"
-                                            className="text-gray-400 hover:text-red-500 transition-colors duration-200 p-1 rounded-full hover:bg-red-50"
+                                            className="ml-2 bg-transparent border-none outline-none text-red-600 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-full transition-all duration-200 shadow-sm"
                                         >
                                             {isDeleting ? (
                                                 <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -344,7 +388,18 @@ export default function PostDetail() {
                                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                 </svg>
                                             ) : (
-                                                <TrashIcon className="w-5 h-5" />
+                                                /* 生のSVGを直接記述 + インラインスタイルで確実に表示 */
+                                                <svg 
+                                                    xmlns="http://www.w3.org/2000/svg" 
+                                                    fill="none" 
+                                                    viewBox="0 0 24 24" 
+                                                    strokeWidth="1.5" 
+                                                    stroke="currentColor" 
+                                                    className="w-5 h-5"
+                                                    style={{ width: '20px', height: '20px', color: '#dc2626' }}
+                                                >
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                                </svg>
                                             )}
                                         </button>
                                     )}
@@ -355,7 +410,6 @@ export default function PostDetail() {
                     <h1 className="text-3xl font-bold text-gray-900 leading-tight">
                         {post.machine}
                     </h1>
-                    <p className="text-xl text-gray-500 mt-2">@ {post.hall}</p>
                 </div>
 
                 {/* メディア領域 */}
@@ -366,11 +420,15 @@ export default function PostDetail() {
                                 <img
                                     src={postMediaUrl}
                                     alt={`${post.machine}の画像`}
-                                    className="rounded-lg max-h-[60vh] object-contain shadow-sm"
+                                    className="rounded-lg max-h-[30vh] object-contain shadow-sm"
+                                    style={{ maxHeight: '30vh' }}
                                 />
                             </div>
                         ) : (
-                            <div className="aspect-video w-full max-w-xl mx-auto">
+                            <div 
+                                className="aspect-video w-full max-w-xl mx-auto"
+                                style={{ maxWidth: '36rem' }} // max-w-xl is 36rem
+                            >
                                 <VideoPlayer
                                     src={postMediaUrl}
                                     controls={true}
@@ -396,10 +454,14 @@ export default function PostDetail() {
                     <div className="mt-8 flex items-center justify-between">
                         <button
                             onClick={handleLike}
-                            className="flex items-center gap-2 px-6 py-2.5 bg-gray-50 hover:bg-pink-50 text-gray-600 hover:text-pink-600 rounded-full border border-gray-200 hover:border-pink-200 transition-all active:scale-95 group shadow-sm"
+                            className={`flex items-center gap-2 px-6 py-2.5 rounded-full border transition-all active:scale-95 shadow-sm font-bold group ${
+                                post?.likedBy?.includes(currentUserId)
+                                    ? "bg-pink-50 text-pink-600 border-pink-200"
+                                    : "bg-gray-50 text-gray-600 border-gray-100 hover:bg-pink-50 hover:text-pink-600 hover:border-pink-200"
+                            }`}
                         >
-                            <span className="text-xl group-hover:scale-125 transition-transform duration-200 flex-shrink-0">👍</span>
-                            <span className="font-bold">{likes}</span>
+                            <span className={`text-xl transition-transform duration-200 flex-shrink-0 ${post?.likedBy?.includes(currentUserId) ? "animate-bounce" : "group-hover:scale-125"}`}>👍</span>
+                            <span>{likes}</span>
                         </button>
                     </div>
                 </div>
@@ -424,9 +486,15 @@ export default function PostDetail() {
                             value={newComment}
                             onChange={(e) => setNewComment(e.target.value)}
                             rows={2}
+                            maxLength={200}
                             disabled={isSubmitting}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all bg-gray-50 resize-none h-24 disabled:opacity-50"
+                            className={`w-full px-4 py-3 rounded-xl border focus:ring-2 outline-none transition-all bg-gray-50 resize-none h-24 disabled:opacity-50 ${
+                                newComment.length > 200 ? "border-red-500 focus:ring-red-100" : "border-gray-200 focus:border-blue-500 focus:ring-blue-100"
+                            }`}
                         />
+                        <div className={`text-right text-xs mt-1 font-medium ${newComment.length >= 200 ? "text-red-500" : "text-gray-400"}`}>
+                            {newComment.length} / 200
+                        </div>
 
                         {/* メディアアップロード領域 */}
                         <div className="w-full">
@@ -462,8 +530,8 @@ export default function PostDetail() {
                         <div className="flex justify-end mt-2">
                             <button
                                 onClick={handleComment}
-                                disabled={isSubmitting || (!newComment.trim() && !commentFile)}
-                                className={`relative overflow-hidden px-6 py-2.5 rounded-xl font-bold transition-all ${isSubmitting || (!newComment.trim() && !commentFile)
+                                disabled={isSubmitting || (!newComment.trim() && !commentFile) || newComment.length > 200}
+                                className={`relative overflow-hidden px-6 py-2.5 rounded-xl font-bold transition-all ${isSubmitting || (!newComment.trim() && !commentFile) || newComment.length > 200
                                     ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
                                     : "bg-blue-600 text-white shadow-md hover:shadow-lg hover:bg-blue-700 active:scale-95 border border-transparent"
                                     }`}
@@ -525,10 +593,21 @@ export default function PostDetail() {
                                                     {currentUserId && c.userId === currentUserId && (
                                                         <button
                                                             onClick={() => handleDeleteComment(c.id, c.mediaFileName)}
-                                                            className="text-gray-400 hover:text-red-500 transition-colors duration-200 p-1 rounded-full hover:bg-red-50"
+                                                            className="ml-2 bg-transparent border-none outline-none text-red-600 hover:text-red-700 hover:bg-red-50 p-1 rounded-full transition-all duration-200 shadow-sm"
                                                             title="コメントを削除"
                                                         >
-                                                            <TrashIcon className="w-4 h-4" />
+                                                            {/* 生のSVGを直接記述 + インラインスタイル */}
+                                                            <svg 
+                                                                xmlns="http://www.w3.org/2000/svg" 
+                                                                fill="none" 
+                                                                viewBox="0 0 24 24" 
+                                                                strokeWidth="1.5" 
+                                                                stroke="currentColor" 
+                                                                className="w-4 h-4"
+                                                                style={{ width: '16px', height: '16px', color: '#dc2626' }}
+                                                            >
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                                            </svg>
                                                         </button>
                                                     )}
                                                 </div>
@@ -546,12 +625,13 @@ export default function PostDetail() {
                                         {commentMediaUrl && (
                                             <div className="pl-10 mb-3 max-w-[200px]">
                                                 {isImageFile(c.mediaFileName, c.mediaType) ? (
-                                                    <img
-                                                        src={commentMediaUrl}
-                                                        alt="コメント添付メディア"
-                                                        className="rounded-lg border border-gray-200 max-h-32 object-contain bg-white"
-                                                        loading="lazy"
-                                                    />
+                                                        <img
+                                                            src={commentMediaUrl}
+                                                            alt="コメント添付メディア"
+                                                            className="rounded-lg border border-gray-200 max-h-32 object-contain bg-white"
+                                                            style={{ maxHeight: '128px' }}
+                                                            loading="lazy"
+                                                        />
                                                 ) : (
                                                     <div className="rounded-lg overflow-hidden border border-gray-200">
                                                         <VideoPlayer
@@ -569,9 +649,13 @@ export default function PostDetail() {
                                         <div className="pl-10">
                                             <button
                                                 onClick={() => handleCommentLike(c.id)}
-                                                className="flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-pink-50 text-gray-500 hover:text-pink-600 rounded-full border border-gray-100 hover:border-pink-100 transition-all active:scale-95 shadow-sm text-xs font-bold group"
+                                                className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all active:scale-95 shadow-sm text-xs font-bold group ${
+                                                    c.likedBy?.includes(currentUserId)
+                                                        ? "bg-pink-50 text-pink-600 border-pink-100"
+                                                        : "bg-white text-gray-500 hover:bg-pink-50 hover:text-pink-600 border-gray-100 hover:border-pink-100"
+                                                }`}
                                             >
-                                                <span className="group-hover:animate-bounce">👍</span>
+                                                <span className={`transition-transform ${c.likedBy?.includes(currentUserId) ? "animate-bounce" : "group-hover:animate-bounce"}`}>👍</span>
                                                 <span>{c.likes || 0}</span>
                                             </button>
                                         </div>

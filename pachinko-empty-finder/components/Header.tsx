@@ -13,6 +13,9 @@ export default function Header() {
                     <Link href="/posts" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">
                         投稿一覧
                     </Link>
+                    <Link href="/machine" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">
+                        機種一覧
+                    </Link>
                     <Link href="/area" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">
                         エリア検索
                     </Link>
