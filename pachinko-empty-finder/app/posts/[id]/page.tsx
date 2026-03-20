@@ -7,6 +7,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import VideoPlayer from "@/components/VideoPlayer";
+import { TrashIcon } from '@heroicons/react/24/outline';
 
 export default function PostDetail() {
     const params = useParams();
@@ -129,6 +130,27 @@ export default function PostDetail() {
             setIsDeleting(false);
         }
     };
+    
+    const handleDeleteComment = async (commentId: string, mediaFileName?: string) => {
+        if (!confirm("このコメントを削除しますか？")) return;
+
+        try {
+            // 1. メディアファイルがある場合はR2から削除
+            if (mediaFileName) {
+                await fetch('/api/delete-media', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fileName: mediaFileName }),
+                });
+            }
+
+            // 2. Firestoreから削除
+            await deleteDoc(doc(db, "comments", commentId));
+        } catch (error) {
+            console.error("Error deleting comment:", error);
+            alert("コメントの削除に失敗しました");
+        }
+    };
 
     const handleComment = async () => {
         if (!newComment.trim() && !commentFile) return;
@@ -188,17 +210,21 @@ export default function PostDetail() {
                     };
 
                     xhr.open('PUT', uploadUrl, true);
-                    xhr.setRequestHeader('Content-Type', commentFile.type);
+                    xhr.setRequestHeader('Content-Type', contentType);
                     xhr.send(commentFile);
                 });
             }
+
+            const extension = commentFile?.name.split('.').pop()?.toLowerCase();
+            const isVideo = commentFile?.type.startsWith('video/') || ['mp4', 'mov', 'webm'].includes(extension || '');
+            const isImage = commentFile?.type.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'heic'].includes(extension || '');
 
             await addDoc(collection(db, "comments"), {
                 postId: id,
                 comment: newComment,
                 userName: "匿名",
                 mediaFileName: mediaFileName || null,
-                mediaType: commentFile?.type.startsWith('image/') ? 'image' : commentFile?.type.startsWith('video/') ? 'video' : null,
+                mediaType: isImage ? 'image' : isVideo ? 'video' : null,
                 createdAt: serverTimestamp(),
                 userId: auth.currentUser?.uid || null
             });
@@ -261,10 +287,24 @@ export default function PostDetail() {
         );
     }
 
-    // R2のベースURLを取得（末尾のスラッシュの有無を考慮）
-    const r2BaseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || '';
-    const baseUrlFormatted = r2BaseUrl.endsWith('/') ? r2BaseUrl : `${r2BaseUrl}/`;
-    const videoUrl = post?.videoFileName ? `${baseUrlFormatted}${post.videoFileName}` : null;
+    // WorkerのURLを取得（末尾のスラッシュの有無を考慮）
+    const workerUrl = process.env.NEXT_PUBLIC_WORKER_URL || '';
+    const baseUrlFormatted = workerUrl.endsWith('/') ? workerUrl.slice(0, -1) : workerUrl;
+    // ドメインが空の場合は、相対パスにならないよう null にする
+    const postMediaUrl = post?.videoFileName && baseUrlFormatted
+        ? `${baseUrlFormatted}/?file=${post.videoFileName}`
+        : null;
+
+    const isImageFile = (fileName: string | undefined, mediaType: string | undefined) => {
+        if (!fileName && !mediaType) return false;
+        const lowerCaseFileName = fileName?.toLowerCase() || '';
+        return mediaType === 'image' ||
+            lowerCaseFileName.endsWith('.heic') ||
+            lowerCaseFileName.endsWith('.jpg') ||
+            lowerCaseFileName.endsWith('.jpeg') ||
+            lowerCaseFileName.endsWith('.png') ||
+            lowerCaseFileName.endsWith('.webp');
+    };
 
     return (
         <div className="container mx-auto px-4 py-12 max-w-3xl">
@@ -287,32 +327,28 @@ export default function PostDetail() {
                                     {post.type}
                                 </span>
                             )}
-                        </div>
-                        <div className="flex items-center gap-3">
                             {post.createdAt && (
-                                <span className="text-xs text-gray-400 font-mono">
+                                <div className="text-sm text-gray-500 flex items-center gap-1 font-mono">
                                     {new Date(post.createdAt.seconds * 1000).toLocaleString("ja-JP")}
-                                </span>
-                            )}
-                            {/* 削除ボタン（自分の投稿のみ表示） */}
-                            {currentUserId && post.userId === currentUserId && (
-                                <button
-                                    onClick={handleDeletePost}
-                                    disabled={isDeleting}
-                                    title="この投稿を削除する"
-                                    className="p-2 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all disabled:opacity-50"
-                                >
-                                    {isDeleting ? (
-                                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                    ) : (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
+                                    
+                                    {currentUserId && post.userId === currentUserId && (
+                                        <button
+                                            onClick={handleDeletePost}
+                                            disabled={isDeleting}
+                                            title="この投稿を削除する"
+                                            className="text-gray-400 hover:text-red-500 transition-colors duration-200 p-1 rounded-full hover:bg-red-50"
+                                        >
+                                            {isDeleting ? (
+                                                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                            ) : (
+                                                <TrashIcon className="w-5 h-5" />
+                                            )}
+                                        </button>
                                     )}
-                                </button>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -323,47 +359,27 @@ export default function PostDetail() {
                 </div>
 
                 {/* メディア領域 */}
-                {videoUrl && (
+                {postMediaUrl && (
                     <div className="w-full bg-black border-b border-gray-100">
-                        {post.mediaType === 'video' ? (
-                            <div className="aspect-video w-full">
+                        {isImageFile(post.videoFileName, post.mediaType) ? (
+                            <div className="w-full flex justify-center bg-gray-50 p-4">
+                                <img
+                                    src={postMediaUrl}
+                                    alt={`${post.machine}の画像`}
+                                    className="rounded-lg max-h-[60vh] object-contain shadow-sm"
+                                />
+                            </div>
+                        ) : (
+                            <div className="aspect-video w-full max-w-xl mx-auto">
                                 <VideoPlayer
-                                    src={videoUrl}
+                                    src={postMediaUrl}
                                     controls={true}
                                     autoPlay={true}
                                     muted={true}
                                     loop={true}
                                 />
                             </div>
-                        ) : post.mediaType === 'image' || !post.mediaType ? (
-                            // 古いデータへのフォールバック対応
-                            (() => {
-                                const isLikelyVideo = !post.mediaType && videoUrl.match(/\.(mp4|webm|ogg|mov)$/i);
-                                if (post.mediaType === 'image' || (!post.mediaType && !isLikelyVideo)) {
-                                    return (
-                                        <div className="w-full flex justify-center bg-gray-50 p-4">
-                                            <img
-                                                src={videoUrl}
-                                                alt={`${post.machine}の画像`}
-                                                className="rounded-lg max-h-[60vh] object-contain shadow-sm"
-                                            />
-                                        </div>
-                                    );
-                                } else {
-                                    return (
-                                        <div className="aspect-video w-full">
-                                            <VideoPlayer
-                                                src={videoUrl}
-                                                controls={true}
-                                                autoPlay={true}
-                                                muted={true}
-                                                loop={true}
-                                            />
-                                        </div>
-                                    );
-                                }
-                            })()
-                        ) : null}
+                        )}
                     </div>
                 )}
 
@@ -390,7 +406,7 @@ export default function PostDetail() {
             </div>
 
             {/* コメントセクション */}
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-8">
                 <div className="p-8 pb-4">
                     <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
@@ -482,7 +498,10 @@ export default function PostDetail() {
                             <p className="text-center text-gray-400 py-8 italic">まだコメントがありません。最初のコメントを書いてみましょう！</p>
                         ) : (
                             comments.map((c) => {
-                                const commentMediaUrl = c.mediaFileName ? `${baseUrlFormatted}${c.mediaFileName}` : null;
+                                // ドメインが空の場合は、相対パスにならないよう null にする
+                                const commentMediaUrl = c.mediaFileName && baseUrlFormatted 
+                                    ? `${baseUrlFormatted}/?file=${c.mediaFileName}` 
+                                    : null;
 
                                 return (
                                     <div key={c.id} className="bg-gray-50 rounded-xl p-4 transition-all hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-100">
@@ -494,14 +513,25 @@ export default function PostDetail() {
                                                 <span className="font-bold text-gray-700 text-sm">{c.userName}</span>
                                             </div>
                                             {c.createdAt && (
-                                                <span className="text-[10px] text-gray-400 font-mono">
-                                                    {new Date(c.createdAt.seconds * 1000).toLocaleString("ja-JP", {
-                                                        month: "2-digit",
-                                                        day: "2-digit",
-                                                        hour: "2-digit",
-                                                        minute: "2-digit"
-                                                    })}
-                                                </span>
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                    <span className="text-[10px] text-gray-400 font-mono">
+                                                        {new Date(c.createdAt.seconds * 1000).toLocaleString("ja-JP", {
+                                                            month: "2-digit",
+                                                            day: "2-digit",
+                                                            hour: "2-digit",
+                                                            minute: "2-digit"
+                                                        })}
+                                                    </span>
+                                                    {currentUserId && c.userId === currentUserId && (
+                                                        <button
+                                                            onClick={() => handleDeleteComment(c.id, c.mediaFileName)}
+                                                            className="text-gray-400 hover:text-red-500 transition-colors duration-200 p-1 rounded-full hover:bg-red-50"
+                                                            title="コメントを削除"
+                                                        >
+                                                            <TrashIcon className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
 
@@ -514,8 +544,15 @@ export default function PostDetail() {
 
                                         {/* コメント画像・メディア領域 */}
                                         {commentMediaUrl && (
-                                            <div className="pl-10 mb-3 max-w-sm">
-                                                {c.mediaType === 'video' ? (
+                                            <div className="pl-10 mb-3 max-w-[200px]">
+                                                {isImageFile(c.mediaFileName, c.mediaType) ? (
+                                                    <img
+                                                        src={commentMediaUrl}
+                                                        alt="コメント添付メディア"
+                                                        className="rounded-lg border border-gray-200 max-h-32 object-contain bg-white"
+                                                        loading="lazy"
+                                                    />
+                                                ) : (
                                                     <div className="rounded-lg overflow-hidden border border-gray-200">
                                                         <VideoPlayer
                                                             src={commentMediaUrl}
@@ -525,33 +562,7 @@ export default function PostDetail() {
                                                             loop={true}
                                                         />
                                                     </div>
-                                                ) : c.mediaType === 'image' || !c.mediaType ? (
-                                                    (() => {
-                                                        const isLikelyVideo = !c.mediaType && commentMediaUrl.match(/\.(mp4|webm|ogg|mov)$/i);
-                                                        if (c.mediaType === 'image' || (!c.mediaType && !isLikelyVideo)) {
-                                                            return (
-                                                                <img
-                                                                    src={commentMediaUrl}
-                                                                    alt="コメント添付メディア"
-                                                                    className="rounded-lg border border-gray-200 max-h-60 object-contain bg-white"
-                                                                    loading="lazy"
-                                                                />
-                                                            );
-                                                        } else {
-                                                            return (
-                                                                <div className="rounded-lg overflow-hidden border border-gray-200">
-                                                                    <VideoPlayer
-                                                                        src={commentMediaUrl}
-                                                                        controls={true}
-                                                                        autoPlay={true}
-                                                                        muted={true}
-                                                                        loop={true}
-                                                                    />
-                                                                </div>
-                                                            );
-                                                        }
-                                                    })()
-                                                ) : null}
+                                                )}
                                             </div>
                                         )}
 

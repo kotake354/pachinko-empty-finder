@@ -96,7 +96,7 @@ export default function PostPage() {
                     };
 
                     xhr.open('PUT', uploadUrl, true);
-                    xhr.setRequestHeader('Content-Type', videoFile.type);
+                    xhr.setRequestHeader('Content-Type', contentType);
                     xhr.send(videoFile);
                 });
             }

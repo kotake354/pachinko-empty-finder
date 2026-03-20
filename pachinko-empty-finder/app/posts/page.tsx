@@ -6,6 +6,7 @@ import { collection, onSnapshot, query, orderBy, where, getDocs, deleteDoc, doc 
 import { onAuthStateChanged } from "firebase/auth";
 import Link from "next/link";
 import VideoPlayer from "@/components/VideoPlayer";
+import { TrashIcon } from '@heroicons/react/24/outline';
 
 export default function PostsPage() {
     const [posts, setPosts] = useState<any[]>([]);
@@ -33,9 +34,9 @@ export default function PostsPage() {
         };
     }, []);
 
-    // R2のベースURLを取得（末尾のスラッシュの有無を考慮）
-    const r2BaseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || '';
-    const baseUrlFormatted = r2BaseUrl.endsWith('/') ? r2BaseUrl : `${r2BaseUrl}/`;
+    // WorkerのURLを取得（末尾のスラッシュの有無を考慮）
+    const workerUrl = process.env.NEXT_PUBLIC_WORKER_URL || '';
+    const baseUrlFormatted = workerUrl.endsWith('/') ? workerUrl.slice(0, -1) : workerUrl;
 
     const handleDeletePost = async (e: React.MouseEvent, post: any) => {
         e.preventDefault(); // 親の Link への遷移を防止
@@ -104,8 +105,8 @@ export default function PostsPage() {
             ) : (
                 <div className="grid gap-6">
                     {posts.map((post) => {
-                        const videoUrl = post?.videoFileName ? `${baseUrlFormatted}${post.videoFileName}` : null;
-                        
+                        const videoUrl = post?.videoFileName && baseUrlFormatted ? `${baseUrlFormatted}/?file=${post.videoFileName}` : null;
+
                         return (
                             <Link
                                 key={post.id}
@@ -123,7 +124,7 @@ export default function PostsPage() {
                                         </div>
                                         <div className="flex items-center gap-3">
                                             {post.createdAt && (
-                                                <span className="text-xs text-gray-400 font-mono">
+                                                <div className="text-xs text-gray-400 font-mono flex items-center gap-1">
                                                     {new Date(post.createdAt.seconds * 1000).toLocaleString("ja-JP", {
                                                         year: "numeric",
                                                         month: "2-digit",
@@ -131,27 +132,26 @@ export default function PostsPage() {
                                                         hour: "2-digit",
                                                         minute: "2-digit"
                                                     })}
-                                                </span>
-                                            )}
-                                            {/* 削除ボタン（自分の投稿のみ表示） */}
-                                            {currentUserId && post.userId === currentUserId && (
-                                                <button
-                                                    onClick={(e) => handleDeletePost(e, post)}
-                                                    disabled={isDeleting === post.id}
-                                                    title="この投稿を削除する"
-                                                    className="p-1.5 rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all z-20"
-                                                >
-                                                    {isDeleting === post.id ? (
-                                                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                        </svg>
-                                                    ) : (
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                        </svg>
+                                                    
+                                                    {/* 削除ボタン（自分の投稿のみ表示） */}
+                                                    {currentUserId && post.userId === currentUserId && (
+                                                        <button
+                                                            onClick={(e) => handleDeletePost(e, post)}
+                                                            disabled={isDeleting === post.id}
+                                                            title="この投稿を削除する"
+                                                            className="text-gray-400 hover:text-red-500 transition-colors duration-200 p-1 rounded-full hover:bg-red-50 z-20"
+                                                        >
+                                                            {isDeleting === post.id ? (
+                                                                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                                </svg>
+                                                            ) : (
+                                                                <TrashIcon className="w-4 h-4" />
+                                                            )}
+                                                        </button>
                                                     )}
-                                                </button>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -161,58 +161,45 @@ export default function PostsPage() {
                                             {post.machine} <span className="text-base font-normal text-gray-500">@ {post.hall}</span>
                                         </h3>
                                     </div>
-                                    
-                                    {/* メディア表示領域 */}
-                                    {videoUrl && (
-                                        <div className="w-full bg-black rounded-lg overflow-hidden mb-4 relative z-10" onClick={(e) => {
-                                            // メディア内クリックで親(Link)への遷移を防ぐ場合は e.preventDefault() 等も可能だが
-                                            // 全体のクリックで詳細に飛ぶ方が自然なためここではそのままに
-                                        }}>
-                                            {post.mediaType === 'video' ? (
-                                                <div className="aspect-video w-full">
-                                                    <VideoPlayer 
-                                                        src={videoUrl}
-                                                        controls={false} // 一覧ではコントロール非表示
-                                                        autoPlay={true}
-                                                        muted={true} // 一覧はミュート必須
-                                                        loop={true}
-                                                        className="rounded-lg"
+
+                                    {(() => {
+                                        const fileName = post.videoFileName?.toLowerCase() || '';
+                                        const isImage = fileName.endsWith('.heic') ||
+                                            fileName.endsWith('.jpg') ||
+                                            fileName.endsWith('.jpeg') ||
+                                            fileName.endsWith('.png') ||
+                                            fileName.endsWith('.webp') ||
+                                            post.mediaType === 'image';
+
+                                        const currentMediaUrl = videoUrl || '';
+                                        if (isImage) {
+                                            return (
+                                                <div className="w-full flex justify-center bg-gray-50 border border-gray-100 rounded-lg relative z-10">
+                                                    <img
+                                                        src={currentMediaUrl}
+                                                        alt={`${post.machine}の画像`}
+                                                        className="rounded-lg max-h-64 object-contain shadow-sm"
+                                                        loading="lazy"
                                                     />
                                                 </div>
-                                            ) : post.mediaType === 'image' || !post.mediaType ? ( // 下位互換性のため !post.mediaType も画像として扱うか、またはファイル名で判定も可。今回は画像優先とする（または動画優先とするか？）
-                                                // 以前の投稿（mediaTypeがないもの）は主に動画だったので、動画としてフォールバックするのが安全かも。しかし今後は明確に判定。
-                                                // 拡張子で判定する簡単なフォールバックを実装
-                                                (() => {
-                                                    const isLikelyVideo = !post.mediaType && videoUrl.match(/\.(mp4|webm|ogg|mov)$/i);
-                                                    if (post.mediaType === 'image' || (!post.mediaType && !isLikelyVideo)) {
-                                                        return (
-                                                            <div className="w-full flex justify-center bg-gray-50 border border-gray-100 rounded-lg">
-                                                                <img 
-                                                                    src={videoUrl} 
-                                                                    alt={`${post.machine}の画像`}
-                                                                    className="rounded-lg max-h-64 object-contain"
-                                                                    loading="lazy"
-                                                                />
-                                                            </div>
-                                                        );
-                                                    } else {
-                                                        return (
-                                                            <div className="aspect-video w-full">
-                                                                <VideoPlayer 
-                                                                    src={videoUrl}
-                                                                    controls={false}
-                                                                    autoPlay={true}
-                                                                    muted={true}
-                                                                    loop={true}
-                                                                    className="rounded-lg"
-                                                                />
-                                                            </div>
-                                                        );
-                                                    }
-                                                })()
-                                            ) : null}
-                                        </div>
-                                    )}
+                                            );
+                                        } else {
+                                            return (
+                                                <div className="w-full bg-black rounded-lg overflow-hidden mb-4 relative z-10">
+                                                    <div className="aspect-video w-full">
+                                                        <VideoPlayer
+                                                            src={currentMediaUrl}
+                                                            controls={false}
+                                                            autoPlay={true}
+                                                            muted={true}
+                                                            loop={true}
+                                                            className="rounded-lg"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                    })()}
 
                                     <div className="bg-gray-50 rounded-lg p-4 group-hover:bg-blue-50/30 transition-colors line-clamp-3">
                                         <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{post.comment}</p>
