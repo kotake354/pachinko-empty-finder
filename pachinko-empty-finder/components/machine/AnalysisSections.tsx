@@ -10,7 +10,9 @@ export default function AnalysisSections({ data }: { data: AnalysisData }) {
   // 表示したい解析項目の定義（IDと表示名のマッピング）
   const sections = [
     { id: "ceiling", title: "天井・ヤメ時", content: data.ceiling },
+    { id: "small-role", title: "小役確率・通常時のベース", content: data["small-role"], img: data["small-role-img"] },
     { id: "how-to-play", title: "打ち方・レア役", content: data["how-to-play"], img: data["how-to-play-img"] },
+    { id: "long-freeze", title: "ロングフリーズと運命揃い", content: data["long-freeze"], img: data["long-freeze-img"] },
     { id: "basic-game", title: "通常時・モード", content: data["basic-game"], img: data["basic-game-img"] },
     { id: "cz-summary", title: "CZ抽選システム", content: data["cz-summary"], img: data["cz-summary-img"] },
     { id: "cz-1", title: "CZ① (詳細)", content: data["cz-1"], img: data["cz-1-img"] },

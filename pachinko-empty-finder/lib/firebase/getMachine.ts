@@ -82,9 +82,14 @@ export async function getMachineExtras(slug: string) {
       getDoc(doc(db, "lillemodel", slug))
     ]);
 
+    const serializeDoc = (data: Record<string, any>) => ({
+      ...data,
+      updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : null,
+    });
+
     return {
-      machinemodel: machinemodelSnap.exists() ? machinemodelSnap.data() : null,
-      lillemodel: lillemodelSnap.exists() ? lillemodelSnap.data() : null,
+      machinemodel: machinemodelSnap.exists() ? serializeDoc(machinemodelSnap.data() as Record<string, any>) : null,
+      lillemodel: lillemodelSnap.exists() ? serializeDoc(lillemodelSnap.data() as Record<string, any>) : null,
     };
   } catch (error) {
     console.error("Error fetching extra machine data:", error);
