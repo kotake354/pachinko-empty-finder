@@ -13,6 +13,10 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'pub-34654406a54c41e7b17e18764789c1a5.r2.dev',
+      },
+      {
+        protocol: 'https',
         hostname: 'images.1geki.jp',
       },
       {
