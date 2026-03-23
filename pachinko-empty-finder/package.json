@@ -6,8 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "import-data": "ts-node scripts/import-machine.ts"
+    "lint": "next lint",
+    "import-data": "ts-node scripts/test-firestore.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1009.0",
