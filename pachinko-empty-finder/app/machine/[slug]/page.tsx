@@ -1,21 +1,18 @@
 import { notFound } from 'next/navigation';
-import { getMachineData, getAllMachines, getMachineExtras } from '@/lib/firebase/getMachine';
+import { getMachineData, getAllMachines } from '@/lib/firebase/getMachine';
 import MachineDetail from '@/components/machine/MachineDetail';
 
 export default async function MachineDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   
   // Firestoreからデータを取得
-  const [data, extras] = await Promise.all([
-    getMachineData(slug),
-    getMachineExtras(slug)
-  ]);
+  const data = await getMachineData(slug);
   
   if (!data) {
     notFound();
   }
 
-  return <MachineDetail data={data} extras={extras} />;
+  return <MachineDetail data={data} />;
 }
 
 // 静的パスの生成 (ビルド時および実行時に利用)

@@ -25,100 +25,122 @@ interface Section {
 
 export default function AnalysisSections({ data }: { data: AnalysisData }) {
   // 表示したい解析項目の定義（IDと表示名のマッピング）
-  const sections: Section[] = [
+  // 🌟 Firestore にタイトルデータがあればそれを優先し、なければデフォルトを表示します
+  const getTitle = (id: string, defaultTitle: string) => {
+    const sectionData = (data as any)[id];
+    if (sectionData && !Array.isArray(sectionData) && sectionData.title) return sectionData.title;
+    return (data as any)[`${id}-title`] || (data as any)[`${id}_title`] || defaultTitle;
+  };
+
+  const sections: Section[] = (data.sections && data.sections.length > 0) 
+    ? data.sections 
+    : [
     { 
       id: "ceiling", 
-      title: "天井・ヤメ時", 
+      title: getTitle("ceiling", "天井・ヤメ時"), 
       content: typeof data.ceiling === 'string' ? data.ceiling : undefined,
       items: Array.isArray(data.ceiling) ? data.ceiling : undefined
     },
     { 
+      id: "settings", 
+      title: getTitle("settings", "設定差・判別ポイント"), 
+      content: typeof data.settings === 'string' ? data.settings : undefined,
+      items: Array.isArray(data.settings) ? data.settings : undefined
+    },
+    { 
       id: "small-role", 
-      title: "小役確率・通常時のベース", 
-      content: typeof data["small-role"] === 'string' ? data["small-role"] : undefined,
-      img: data["small-role-img"],
-      items: Array.isArray(data["small-role"]) ? data["small-role"] : undefined
+      title: getTitle("small-role", "小役確率・通常時のベース"), 
+      content: typeof (data as any)["small-role"] === 'string' ? (data as any)["small-role"] : undefined,
+      img: (data as any)["small-role-img"],
+      items: Array.isArray((data as any)["small-role"]) ? (data as any)["small-role"] : undefined
     },
     { 
       id: "how-to-play", 
-      title: "打ち方・レア役", 
-      content: typeof data["how-to-play"] === 'string' ? data["how-to-play"] : undefined, 
-      img: data["how-to-play-img"],
-      items: Array.isArray(data["how-to-play"]) ? data["how-to-play"] : undefined
+      title: getTitle("how-to-play", "打ち方・レア役"), 
+      content: typeof (data as any)["how-to-play"] === 'string' ? (data as any)["how-to-play"] : undefined,
+      img: (data as any)["how-to-play-img"],
+      items: Array.isArray((data as any)["how-to-play"]) ? (data as any)["how-to-play"] : undefined
     },
     { 
       id: "basic-game", 
-      title: "通常時・モード", 
-      content: typeof data["basic-game"] === 'string' ? data["basic-game"] : undefined, 
-      img: data["basic-game-img"],
-      items: Array.isArray(data["basic-game"]) ? data["basic-game"] : undefined
+      title: getTitle("basic-game", "通常時・モード"), 
+      content: typeof (data as any)["basic-game"] === 'string' ? (data as any)["basic-game"] : undefined,
+      img: (data as any)["basic-game-img"],
+      items: Array.isArray((data as any)["basic-game"]) ? (data as any)["basic-game"] : undefined
     },
     { 
       id: "cz-summary", 
-      title: "CZ抽選システム", 
-      content: typeof data["cz-summary"] === 'string' ? data["cz-summary"] : undefined, 
-      img: data["cz-summary-img"],
-      items: Array.isArray(data["cz-summary"]) ? data["cz-summary"] : undefined
+      title: getTitle("cz-summary", "CZ抽選システム"), 
+      content: typeof (data as any)["cz-summary"] === 'string' ? (data as any)["cz-summary"] : undefined,
+      img: (data as any)["cz-summary-img"],
+      items: Array.isArray((data as any)["cz-summary"]) ? (data as any)["cz-summary"] : undefined
     },
     { 
       id: "cz-1", 
-      title: "CZ① (詳細)", 
-      content: typeof data["cz-1"] === 'string' ? data["cz-1"] : undefined, 
-      img: data["cz-1-img"],
-      items: Array.isArray(data["cz-1"]) ? data["cz-1"] : undefined
+      title: getTitle("cz-1", "CZ①"), 
+      content: typeof (data as any)["cz-1"] === 'string' ? (data as any)["cz-1"] : undefined,
+      img: (data as any)["cz-1-img"],
+      items: Array.isArray((data as any)["cz-1"]) ? (data as any)["cz-1"] : undefined
     },
     { 
       id: "cz-2", 
-      title: "CZ② (詳細)", 
-      content: typeof data["cz-2"] === 'string' ? data["cz-2"] : undefined, 
-      img: data["cz-2-img"],
-      items: Array.isArray(data["cz-2"]) ? data["cz-2"] : undefined
+      title: getTitle("cz-2", "CZ②"), 
+      content: typeof (data as any)["cz-2"] === 'string' ? (data as any)["cz-2"] : undefined,
+      img: (data as any)["cz-2-img"],
+      items: Array.isArray((data as any)["cz-2"]) ? (data as any)["cz-2"] : undefined
     },
     { 
       id: "cz-3", 
-      title: "CZ③ (詳細)", 
-      content: typeof data["cz-3"] === 'string' ? data["cz-3"] : undefined, 
-      img: data["cz-3-img"],
-      items: Array.isArray(data["cz-3"]) ? data["cz-3"] : undefined
+      title: getTitle("cz-3", "CZ③"), 
+      content: typeof (data as any)["cz-3"] === 'string' ? (data as any)["cz-3"] : undefined,
+      img: (data as any)["cz-3-img"],
+      items: Array.isArray((data as any)["cz-3"]) ? (data as any)["cz-3"] : undefined
     },
     { 
       id: "cz-special", 
-      title: "特殊CZ (詳細)", 
-      content: typeof data["cz-special"] === 'string' ? data["cz-special"] : undefined, 
-      img: data["cz-special-img"],
-      items: Array.isArray(data["cz-special"]) ? data["cz-special"] : undefined
+      title: getTitle("cz-special", "特殊CZ"), 
+      content: typeof (data as any)["cz-special"] === 'string' ? (data as any)["cz-special"] : undefined,
+      img: (data as any)["cz-special-img"],
+      items: Array.isArray((data as any)["cz-special"]) ? (data as any)["cz-special"] : undefined
     },
     { 
       id: "bonus", 
-      title: "ボーナス関連", 
-      content: typeof data.bonus === 'string' ? data.bonus : undefined, 
-      img: data["bonus-img"],
+      title: getTitle("bonus", "ボーナス関連"), 
+      content: typeof data.bonus === 'string' ? data.bonus : undefined,
+      img: (data as any)["bonus-img"],
       items: Array.isArray(data.bonus) ? data.bonus : undefined
     },
     { 
       id: "st-main", 
-      title: "ST（デッドオアアライブ）", 
-      content: typeof data["st-main"] === 'string' ? data["st-main"] : undefined, 
-      img: data["st-main-img"],
-      items: Array.isArray(data["st-main"]) ? data["st-main"] : undefined
+      title: getTitle("st-main", "ST関連"), 
+      content: typeof (data as any)["st-main"] === 'string' ? (data as any)["st-main"] : undefined,
+      img: (data as any)["st-main-img"],
+      items: Array.isArray((data as any)["st-main"]) ? (data as any)["st-main"] : undefined
     },
     { 
       id: "at-main", 
-      title: "AT・上位AT関連", 
-      content: typeof data["at-main"] === 'string' ? data["at-main"] : undefined, 
-      img: data["at-main-img"],
-      items: Array.isArray(data["at-main"]) ? data["at-main"] : undefined
+      title: getTitle("at-main", "AT・上位AT関連"), 
+      content: typeof (data as any)["at-main"] === 'string' ? (data as any)["at-main"] : undefined,
+      img: (data as any)["at-main-img"],
+      items: Array.isArray((data as any)["at-main"]) ? (data as any)["at-main"] : undefined
     },
     { 
       id: "special-zone", 
-      title: "上乗せ特化ゾーン（極悪ドライブ）", 
+      title: getTitle("special-zone", "上乗せ特化ゾーン"), 
       content: typeof data["special-zone"] === 'string' ? data["special-zone"] : undefined, 
       img: data["special-zone-img"],
       items: Array.isArray(data["special-zone"]) ? data["special-zone"] : undefined
     },
     { 
+      id: "premium", 
+      title: getTitle("premium", "最強特化ゾーン"), 
+      content: typeof data.premium === 'string' ? data.premium : undefined, 
+      img: data["premium-img"],
+      items: Array.isArray(data.premium) ? data.premium : undefined
+    },
+    { 
       id: "long-freeze", 
-      title: "ロングフリーズと運命揃い", 
+      title: getTitle("long-freeze", "ロングフリーズと運命揃い"), 
       content: typeof data["long-freeze"] === 'string' ? data["long-freeze"] : undefined, 
       img: data["long-freeze-img"],
       items: Array.isArray(data["long-freeze"]) ? data["long-freeze"] : undefined
@@ -223,8 +245,16 @@ export default function AnalysisSections({ data }: { data: AnalysisData }) {
 
                           {item.img && (
                             <div className="mt-3 rounded-lg overflow-hidden shadow-sm border border-gray-200">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={item.img} alt="" className="w-full h-auto object-cover" />
+                              {item.img.startsWith("http") || item.img.startsWith("/") ? (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img src={item.img} alt="" className="w-full h-auto object-cover" />
+                              ) : (
+                                <div className="w-full h-32 bg-gray-100 flex items-center justify-center p-4 text-center">
+                                  <span className="text-red-500 font-bold text-[10px] break-all">
+                                    {item.img}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -235,8 +265,16 @@ export default function AnalysisSections({ data }: { data: AnalysisData }) {
                       <p>{s.content}</p>
                       {s.img && (
                         <div className="mt-3 rounded-lg overflow-hidden shadow-sm border border-gray-200">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={s.img} alt={s.title} className="w-full h-auto object-cover" />
+                          {s.img.startsWith("http") || s.img.startsWith("/") ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img src={s.img} alt={s.title} className="w-full h-auto object-cover" />
+                          ) : (
+                            <div className="w-full h-32 bg-gray-100 flex items-center justify-center p-4 text-center">
+                              <span className="text-red-500 font-bold text-[10px] break-all">
+                                {s.img}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

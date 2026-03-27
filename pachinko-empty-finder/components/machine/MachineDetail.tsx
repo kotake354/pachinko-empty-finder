@@ -50,13 +50,21 @@ export default function MachineDetail({ data, extras }: { data: Machine, extras?
         <section className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="relative aspect-[3/4] bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 shadow-md flex items-center justify-center">
             {data.images?.main ? (
-              <Image
-                src={data.images.main}
-                alt={data.name}
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-contain p-4"
-              />
+              data.images.main.startsWith("http") || data.images.main.startsWith("/") ? (
+                <Image
+                  src={data.images.main}
+                  alt={data.name}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  className="object-contain p-4"
+                />
+              ) : (
+                <div className="w-full h-full bg-gray-200 flex items-center justify-center p-4 text-center">
+                  <span className="text-red-500 font-bold text-[10px] break-all">
+                    {data.images.main}
+                  </span>
+                </div>
+              )
             ) : (
               <div className="text-gray-400 text-xs font-bold bg-gray-100 w-full h-full flex items-center justify-center italic">
                 NO IMAGE
@@ -158,7 +166,8 @@ export default function MachineDetail({ data, extras }: { data: Machine, extras?
         )}
 
         {/* 筐体＆リール配列 */}
-        {(extras?.machinemodel?.imageUrl || extras?.lillemodel?.imageUrl) && (
+        {/* 筐体＆リール配列 */}
+        {(data.images?.paytable || data.images?.reel) && (
           <section className="p-6">
             <div className="bg-gray-800 text-white px-4 py-2 text-sm font-black flex items-center justify-between shadow-sm">
               <span className="flex items-center gap-2">
@@ -169,21 +178,37 @@ export default function MachineDetail({ data, extras }: { data: Machine, extras?
             </div>
             <div className="bg-white p-6 border-x border-b border-gray-200 shadow-sm">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {extras?.machinemodel?.imageUrl && (
+              {data.images?.paytable && (
                 <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
                   <h3 className="text-sm font-bold text-gray-700 mb-3 text-center bg-gray-50 py-2 rounded">配当表</h3>
                   <div className="flex justify-center p-4">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={extras.machinemodel.imageUrl} alt={`${data.name} 配当表`} className="max-h-96 object-contain" />
+                    {data.images.paytable.startsWith("http") || data.images.paytable.startsWith("/") ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={data.images.paytable} alt={`${data.name} 配当表`} className="max-h-96 object-contain" />
+                    ) : (
+                      <div className="w-full h-32 bg-gray-100 flex items-center justify-center p-4 text-center rounded-lg">
+                        <span className="text-red-500 font-bold text-[10px] break-all">
+                          {data.images.paytable}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
-              {extras?.lillemodel?.imageUrl && (
+              {data.images?.reel && (
                 <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
                   <h3 className="text-sm font-bold text-gray-700 mb-3 text-center bg-gray-50 py-2 rounded">リール配列</h3>
                   <div className="flex justify-center p-4">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={extras.lillemodel.imageUrl} alt={`${data.name} リール配列`} className="max-h-96 object-contain" />
+                    {data.images.reel.startsWith("http") || data.images.reel.startsWith("/") ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={data.images.reel} alt={`${data.name} リール配列`} className="max-h-96 object-contain" />
+                    ) : (
+                      <div className="w-full h-32 bg-gray-100 flex items-center justify-center p-4 text-center rounded-lg">
+                        <span className="text-red-500 font-bold text-[10px] break-all">
+                          {data.images.reel}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

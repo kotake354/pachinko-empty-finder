@@ -15,21 +15,16 @@ if (!getApps().length) {
 }
 
 const db = getFirestore();
-const slug = 'l-akudama-drive';
+const slug = 'l-shinuchi-yoshimune';
 
 async function main() {
   const doc = await db.collection('machines').doc(slug).get();
   if (doc.exists) {
     const data = doc.data();
-    console.log('--- settings ---');
-    console.log('Type:', typeof data?.settings);
-    console.log('IsArray:', Array.isArray(data?.settings));
-    console.log('Content:', JSON.stringify(data?.settings, null, 2));
-    
-    console.log('\n--- ceiling ---');
-    console.log('IsArray:', Array.isArray(data?.ceiling));
+    console.log('--- ALL DATA ---');
+    console.log(JSON.stringify(data, null, 2));
   } else {
-    console.log('Document not found');
+    console.log('Document not found:', slug);
   }
 }
 
