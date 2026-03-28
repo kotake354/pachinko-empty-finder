@@ -1,9 +1,15 @@
 "use client";
 
-import { Link as ScrollLink, Element } from "react-scroll";
+import { Link as ScrollLink, Element, animateScroll as scroll } from "react-scroll";
+import Image from "next/image";
+import { useState, useEffect } from "react";
 
-interface AnalysisData {
-  [key: string]: any;
+// =========================================
+// 🌟 テーブル型の定義
+// =========================================
+interface TableData {
+  headers: string[];
+  rows: string[][];
 }
 
 interface Section {
@@ -11,280 +17,230 @@ interface Section {
   title: string;
   content?: string;
   img?: string;
-  items?: { 
-    title?: string;
-    text: string; 
-    img?: string;
-    table?: {
-      headers: string[];
-      rows: (string | number)[][];
-    };
-    tableJson?: string;
-  }[];
+  items?: { title?: string; text?: string; img?: string; table?: TableData }[];
+  category?: string;
+}
+
+interface AnalysisData {
+  sections?: Section[];
 }
 
 export default function AnalysisSections({ data }: { data: AnalysisData }) {
-  // 表示したい解析項目の定義（IDと表示名のマッピング）
-  // 🌟 Firestore にタイトルデータがあればそれを優先し、なければデフォルトを表示します
-  const getTitle = (id: string, defaultTitle: string) => {
-    const sectionData = (data as any)[id];
-    if (sectionData && !Array.isArray(sectionData) && sectionData.title) return sectionData.title;
-    return (data as any)[`${id}-title`] || (data as any)[`${id}_title`] || defaultTitle;
+  const sections = data.sections || [];
+  const [showTopBtn, setShowTopBtn] = useState(false);
+
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
+    "基本情報・スペック": true,
+    "設定判別・推測ポイント": true,
+  });
+
+  const toggleCategory = (category: string) => {
+    setOpenCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
   };
 
-  const sections: Section[] = (data.sections && data.sections.length > 0) 
-    ? data.sections 
-    : [
-    { 
-      id: "ceiling", 
-      title: getTitle("ceiling", "天井・ヤメ時"), 
-      content: typeof data.ceiling === 'string' ? data.ceiling : undefined,
-      items: Array.isArray(data.ceiling) ? data.ceiling : undefined
-    },
-    { 
-      id: "settings", 
-      title: getTitle("settings", "設定差・判別ポイント"), 
-      content: typeof data.settings === 'string' ? data.settings : undefined,
-      items: Array.isArray(data.settings) ? data.settings : undefined
-    },
-    { 
-      id: "small-role", 
-      title: getTitle("small-role", "小役確率・通常時のベース"), 
-      content: typeof (data as any)["small-role"] === 'string' ? (data as any)["small-role"] : undefined,
-      img: (data as any)["small-role-img"],
-      items: Array.isArray((data as any)["small-role"]) ? (data as any)["small-role"] : undefined
-    },
-    { 
-      id: "how-to-play", 
-      title: getTitle("how-to-play", "打ち方・レア役"), 
-      content: typeof (data as any)["how-to-play"] === 'string' ? (data as any)["how-to-play"] : undefined,
-      img: (data as any)["how-to-play-img"],
-      items: Array.isArray((data as any)["how-to-play"]) ? (data as any)["how-to-play"] : undefined
-    },
-    { 
-      id: "basic-game", 
-      title: getTitle("basic-game", "通常時・モード"), 
-      content: typeof (data as any)["basic-game"] === 'string' ? (data as any)["basic-game"] : undefined,
-      img: (data as any)["basic-game-img"],
-      items: Array.isArray((data as any)["basic-game"]) ? (data as any)["basic-game"] : undefined
-    },
-    { 
-      id: "cz-summary", 
-      title: getTitle("cz-summary", "CZ抽選システム"), 
-      content: typeof (data as any)["cz-summary"] === 'string' ? (data as any)["cz-summary"] : undefined,
-      img: (data as any)["cz-summary-img"],
-      items: Array.isArray((data as any)["cz-summary"]) ? (data as any)["cz-summary"] : undefined
-    },
-    { 
-      id: "cz-1", 
-      title: getTitle("cz-1", "CZ①"), 
-      content: typeof (data as any)["cz-1"] === 'string' ? (data as any)["cz-1"] : undefined,
-      img: (data as any)["cz-1-img"],
-      items: Array.isArray((data as any)["cz-1"]) ? (data as any)["cz-1"] : undefined
-    },
-    { 
-      id: "cz-2", 
-      title: getTitle("cz-2", "CZ②"), 
-      content: typeof (data as any)["cz-2"] === 'string' ? (data as any)["cz-2"] : undefined,
-      img: (data as any)["cz-2-img"],
-      items: Array.isArray((data as any)["cz-2"]) ? (data as any)["cz-2"] : undefined
-    },
-    { 
-      id: "cz-3", 
-      title: getTitle("cz-3", "CZ③"), 
-      content: typeof (data as any)["cz-3"] === 'string' ? (data as any)["cz-3"] : undefined,
-      img: (data as any)["cz-3-img"],
-      items: Array.isArray((data as any)["cz-3"]) ? (data as any)["cz-3"] : undefined
-    },
-    { 
-      id: "cz-special", 
-      title: getTitle("cz-special", "特殊CZ"), 
-      content: typeof (data as any)["cz-special"] === 'string' ? (data as any)["cz-special"] : undefined,
-      img: (data as any)["cz-special-img"],
-      items: Array.isArray((data as any)["cz-special"]) ? (data as any)["cz-special"] : undefined
-    },
-    { 
-      id: "bonus", 
-      title: getTitle("bonus", "ボーナス関連"), 
-      content: typeof data.bonus === 'string' ? data.bonus : undefined,
-      img: (data as any)["bonus-img"],
-      items: Array.isArray(data.bonus) ? data.bonus : undefined
-    },
-    { 
-      id: "st-main", 
-      title: getTitle("st-main", "ST関連"), 
-      content: typeof (data as any)["st-main"] === 'string' ? (data as any)["st-main"] : undefined,
-      img: (data as any)["st-main-img"],
-      items: Array.isArray((data as any)["st-main"]) ? (data as any)["st-main"] : undefined
-    },
-    { 
-      id: "at-main", 
-      title: getTitle("at-main", "AT・上位AT関連"), 
-      content: typeof (data as any)["at-main"] === 'string' ? (data as any)["at-main"] : undefined,
-      img: (data as any)["at-main-img"],
-      items: Array.isArray((data as any)["at-main"]) ? (data as any)["at-main"] : undefined
-    },
-    { 
-      id: "special-zone", 
-      title: getTitle("special-zone", "上乗せ特化ゾーン"), 
-      content: typeof data["special-zone"] === 'string' ? data["special-zone"] : undefined, 
-      img: data["special-zone-img"],
-      items: Array.isArray(data["special-zone"]) ? data["special-zone"] : undefined
-    },
-    { 
-      id: "premium", 
-      title: getTitle("premium", "最強特化ゾーン"), 
-      content: typeof data.premium === 'string' ? data.premium : undefined, 
-      img: data["premium-img"],
-      items: Array.isArray(data.premium) ? data.premium : undefined
-    },
-    { 
-      id: "long-freeze", 
-      title: getTitle("long-freeze", "ロングフリーズと運命揃い"), 
-      content: typeof data["long-freeze"] === 'string' ? data["long-freeze"] : undefined, 
-      img: data["long-freeze-img"],
-      items: Array.isArray(data["long-freeze"]) ? data["long-freeze"] : undefined
-    },
-    { 
-      id: "settings", 
-      title: "設定差・判別ポイント", 
-      content: typeof data.settings === 'string' ? data.settings : undefined,
-      items: Array.isArray(data.settings) ? data.settings : undefined
-    },
+  useEffect(() => {
+    const handleScroll = () => setShowTopBtn(window.scrollY > 300);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => scroll.scrollToTop({ smooth: true, duration: 500 });
+
+  if (!sections.length) return null;
+
+  // =========================================
+  // 🧠 自動カテゴリ振り分けロジック
+  // =========================================
+  const categoryOrder = [
+    "基本情報・スペック",
+    "設定判別・推測ポイント",
+    "天井・リセット・朝一",
+    "通常関連",
+    "ボーナス・AT関連",
+    "演出関連"
   ];
 
-  return (
-    <div className="mt-8 px-4 pb-8">
-      {/* 1. クイックナビ（一撃風の目次ボタン） */}
-      <nav className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-10">
-        {sections.map((s, idx) => {
-          // コンテンツが存在するかどうかを確認
-          const hasContent = s.items && s.items.length > 0
-            ? s.items.some(item => item.text)
-            : !!s.content;
+  const groupedSections: Record<string, Section[]> = categoryOrder.reduce((acc, cat) => {
+    acc[cat] = [];
+    return acc;
+  }, {} as Record<string, Section[]>);
 
-          return hasContent ? (
-            <ScrollLink
-              key={s.id || idx}
-              to={s.id}
-              smooth={true}
-              offset={-70}
-              className="cursor-pointer bg-gray-100 hover:bg-blue-600 hover:text-white text-gray-700 text-[11px] font-bold py-3 px-2 rounded-lg text-center transition-all border border-gray-200 shadow-sm"
+  sections.forEach(s => {
+    let cat = s.category;
+    if (!cat) {
+      const t = s.title + s.id;
+      if (t.match(/設定|判別|推測|終了画面|トロフィー/)) cat = "設定判別・推測ポイント";
+      else if (t.match(/天井|リセット|朝一|ヤメ時|やめどき/)) cat = "天井・リセット・朝一";
+      else if (t.match(/ボーナス|AT|ST|特化|ラッシュ|BB|ドライブ|ジャッジ/i)) cat = "ボーナス・AT関連";
+      else if (t.match(/演出|フリーズ|示唆|アイキャッチ/)) cat = "演出関連";
+      else if (t.match(/通常|CZ|ポイント|周期|ステージ|メーター/)) cat = "通常関連";
+      else cat = "基本情報・スペック";
+    }
+    
+    if (groupedSections[cat]) {
+      groupedSections[cat].push(s);
+    } else {
+      if (!groupedSections["基本情報・スペック"]) groupedSections["基本情報・スペック"] = [];
+      groupedSections["基本情報・スペック"].push(s);
+    }
+  });
+
+  // 🌟 サイドバー＆スマホ上部ナビ用のコンポーネント
+  const renderAccordionNav = () => (
+    <div className="w-full flex flex-col rounded-b-lg overflow-hidden border-x border-b border-[#444] shadow-md bg-[#2b2b2b]">
+      {categoryOrder.map(cat => {
+        const items = groupedSections[cat];
+        if (!items || items.length === 0) return null;
+        const isOpen = openCategories[cat];
+
+        return (
+          <div key={cat} className="flex flex-col border-b border-[#111] last:border-b-0">
+            <button
+              onClick={() => toggleCategory(cat)}
+              className="w-full flex justify-between items-center bg-[#1a1a1a] hover:bg-[#222] text-white px-3 py-3 font-bold text-[13px] transition-colors"
             >
-              {s.title}
-            </ScrollLink>
-          ) : null;
-        })}
+              <span className="flex items-center gap-2">
+                <span className="text-red-500 text-lg leading-none">○</span> {cat}
+              </span>
+              <span className="text-gray-400 text-[10px]">{isOpen ? "▲" : "▼"}</span>
+            </button>
+
+            {isOpen && (
+              <div className="flex flex-col bg-[#2b2b2b]">
+                {items.map((s, idx) => (
+                  <ScrollLink
+                    key={`nav-${s.id || idx}`}
+                    to={s.id}
+                    smooth={true}
+                    offset={-100}
+                    spy={true}
+                    activeClass="bg-gray-700 text-white font-bold border-l-4 border-red-500"
+                    className="cursor-pointer border-t border-[#3c3c3c] pl-8 pr-4 py-3 text-xs text-gray-300 hover:bg-[#333] hover:text-white transition-colors leading-relaxed"
+                  >
+                    {s.title}
+                  </ScrollLink>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    // 🌟 全体のレイアウト：PCは横並び（左サイドバー、右コンテンツ）
+    <div className="mt-8 px-2 md:px-4 pb-8 flex flex-col md:flex-row gap-6 items-start relative max-w-[1400px] mx-auto">
+      
+      {/* 📱 スマホ用：上部のアコーディオンナビ */}
+      <nav className="md:hidden w-full z-10 mb-4">
+        <div className="bg-[#1a1a1a] text-center font-bold text-white text-sm py-2 rounded-t-lg tracking-widest border-b-2 border-red-600">
+          解析情報インデックス
+        </div>
+        {renderAccordionNav()}
       </nav>
 
-      {/* 2. 各解析コンテンツのレンダリング */}
-      <div className="space-y-12">
-        {sections.map((s, idx) => {
-          const hasContent = s.items && s.items.length > 0
-            ? s.items.some(item => item.text)
-            : !!s.content;
+      {/* 💻 PC・タブレット用：左サイドバー（固定） */}
+      <aside className="hidden md:block w-64 lg:w-72 flex-shrink-0 sticky top-24 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-lg shadow-xl scrollbar-thin scrollbar-thumb-gray-500 z-10">
+        <div className="bg-[#1a1a1a] text-center font-bold text-white text-sm py-3 rounded-t-lg tracking-widest border-b-2 border-red-600">
+          解析情報インデックス
+        </div>
+        {renderAccordionNav()}
+      </aside>
 
-          return hasContent ? (
-            <Element name={s.id} key={s.id || idx} className="scroll-mt-20">
-              {/* ヘッダー部分：一撃のあの重厚な感じ */}
-              <div className="bg-gray-800 text-white px-4 py-2 text-sm font-black flex items-center justify-between shadow-sm">
-                <span className="flex items-center gap-2">
-                  <span className="bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded tracking-wider">解析</span>
-                  {s.title}
-                </span>
-                <span className="text-[10px] opacity-70 font-bold tracking-widest">ANALYSIS DATA</span>
+      {/* 📖 右側：メインコンテンツエリア */}
+      <div className="flex-1 w-full min-w-0 space-y-12 z-0">
+        {categoryOrder.map(cat => {
+          const items = groupedSections[cat];
+          if (!items || items.length === 0) return null;
+
+          return items.map((s, idx) => (
+            <Element name={s.id} key={s.id || idx} className="scroll-mt-24">
+              <div className="bg-gradient-to-r from-gray-800 to-gray-700 text-white px-4 py-3 text-base font-black flex items-center shadow-md rounded-t-md">
+                <span className="w-1.5 h-5 bg-red-500 mr-3 rounded-sm"></span>
+                {s.title}
               </div>
               
-              <div className="bg-white overflow-hidden border-x border-b border-gray-200 shadow-sm">
-                <div className="p-5 text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
-                  {s.items && s.items.length > 0 ? (
-                    <div className="space-y-6">
-                      {s.items.map((item, i) => item.text && (
-                        <div key={i} className="p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500 shadow-sm">
-                          {item.title && <p className="font-bold text-blue-900 mb-2">{item.title}</p>}
-                          <p className={item.table || item.img ? "mb-4" : ""}>{item.text}</p>
-                          
-                          {/* テーブル表示機能 */}
-                          {(() => {
-                            let tableData = item.table;
-                            if (item.tableJson) {
-                              try {
-                                tableData = JSON.parse(item.tableJson);
-                              } catch (e) {
-                                console.error("Failed to parse tableJson:", e);
-                              }
-                            }
-                            
-                            if (!tableData) return null;
-
-                            return (
-                              <div className="overflow-x-auto mb-4 rounded-lg border border-gray-200 shadow-inner">
-                                <table className="w-full text-xs text-left border-collapse bg-white">
-                                  <thead>
-                                    <tr className="bg-gray-700 text-white">
-                                      {tableData.headers.map((h, j) => (
-                                        <th key={j} className="p-2.5 border border-gray-600 font-bold text-center">{h}</th>
-                                      ))}
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {tableData.rows.map((row, j) => (
-                                      <tr key={j} className={j % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
-                                        {Array.isArray(row) ? row.map((cell, k) => (
-                                          <td key={k} className="p-2.5 border border-gray-200 text-center font-medium">{cell}</td>
-                                        )) : (
-                                          <td colSpan={tableData!.headers.length} className="p-2.5 border border-gray-200 text-center font-medium text-red-500">Invalid row data</td>
-                                        )}
-                                      </tr>
+              <div className="bg-white p-4 md:p-6 border-x border-b border-gray-200 shadow-sm rounded-b-md relative">
+                {s.items ? (
+                  // 🌟 ここがポイント！ 2列（grid）をやめて、縦1列（space-y-8）でドカンと見せる
+                  <div className="space-y-8 w-full">
+                    {s.items.map((item, i) => (item.text || item.img || item.table) && (
+                      <div key={i} className="flex flex-col bg-gray-50 p-5 rounded-lg border border-gray-100 shadow-sm">
+                        {item.title && <h4 className="font-bold text-red-700 mb-3 border-b border-red-100 pb-2 text-base md:text-lg">{item.title}</h4>}
+                        {item.text && <p className="text-sm md:text-base text-gray-800 flex-grow whitespace-pre-wrap leading-relaxed mb-4">{item.text}</p>}
+                        
+                        {/* 🌟 テーブル描画 */}
+                        {item.table && (
+                          <div className="overflow-x-auto w-full mb-4 rounded border border-gray-300">
+                            <table className="w-full text-sm md:text-base text-left border-collapse bg-white">
+                              <thead>
+                                <tr className="bg-gray-800 text-white whitespace-nowrap">
+                                  {item.table.headers.map((h, j) => (
+                                    <th key={j} className="p-3 border border-gray-700 font-bold">{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {item.table.rows.map((row, j) => (
+                                  <tr key={j} className={j % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                                    {row.map((cell, k) => (
+                                      <td key={k} className="p-3 border border-gray-200">{cell}</td>
                                     ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            );
-                          })()}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
 
-                          {item.img && (
-                            <div className="mt-3 rounded-lg overflow-hidden shadow-sm border border-gray-200">
-                              {item.img.startsWith("http") || item.img.startsWith("/") ? (
-                                /* eslint-disable-next-line @next/next/no-img-element */
-                                <img src={item.img} alt="" className="w-full h-auto object-cover" />
-                              ) : (
-                                <div className="w-full h-32 bg-gray-100 flex items-center justify-center p-4 text-center">
-                                  <span className="text-red-500 font-bold text-[10px] break-all">
-                                    {item.img}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500 shadow-sm">
-                      <p>{s.content}</p>
-                      {s.img && (
-                        <div className="mt-3 rounded-lg overflow-hidden shadow-sm border border-gray-200">
-                          {s.img.startsWith("http") || s.img.startsWith("/") ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img src={s.img} alt={s.title} className="w-full h-auto object-cover" />
+                        {item.img && (
+                          // 🌟 画像も1列に合わせて大きく表示（aspect-videoで16:9をキープ）
+                          <div className="mt-2 rounded-md overflow-hidden border border-gray-200 relative w-full aspect-video bg-white shadow-sm max-w-4xl mx-auto">
+                            {item.img.startsWith('http') || item.img.startsWith('/') ? (
+                              <Image src={item.img} alt="" fill className="object-contain" loading="lazy" unoptimized />
+                            ) : (
+                              <div className="flex items-center justify-center h-full bg-gray-200 text-red-500 text-xs break-all p-2">{item.img}</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm md:text-base text-gray-800 leading-relaxed whitespace-pre-wrap w-full">
+                    <p>{s.content}</p>
+                    {s.img && (
+                      <div className="mt-6 rounded-md overflow-hidden relative w-full aspect-video max-w-4xl mx-auto shadow-sm border border-gray-200">
+                         {s.img.startsWith('http') || s.img.startsWith('/') ? (
+                            <Image src={s.img} alt={s.title} fill className="object-contain" loading="lazy" unoptimized />
                           ) : (
-                            <div className="w-full h-32 bg-gray-100 flex items-center justify-center p-4 text-center">
-                              <span className="text-red-500 font-bold text-[10px] break-all">
-                                {s.img}
-                              </span>
-                            </div>
+                            <div className="flex items-center justify-center h-full bg-gray-200 text-red-500 text-xs break-all p-2">{s.img}</div>
                           )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </Element>
-          ) : null;
+          ));
         })}
       </div>
+
+      {/* 🔝 ページTOPへ戻るボタン */}
+      <button
+        onClick={scrollToTop}
+        className={`fixed bottom-10 right-10 z-50 p-4 bg-red-700 text-white rounded-lg shadow-2xl transition-all duration-300 flex flex-col items-center justify-center gap-1 hover:bg-red-600 active:scale-95 ${
+          showTopBtn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"
+        }`}
+      >
+        <span className="text-xl">▲</span>
+        <span className="text-[10px] font-bold">TOP</span>
+      </button>
+      
     </div>
   );
 }
