@@ -9,7 +9,7 @@ import { useState, useEffect } from "react";
 // =========================================
 interface TableData {
   headers: string[];
-  rows: string[][];
+  rows: string[][] | string;
 }
 
 interface Section {
@@ -71,15 +71,16 @@ export default function AnalysisSections({ data }: { data: AnalysisData }) {
   sections.forEach(s => {
     let cat = s.category;
     if (!cat) {
-      const t = s.title + s.id;
-      if (t.match(/設定|判別|推測|終了画面|トロフィー/)) cat = "設定判別・推測ポイント";
+      const t = (s.title + (s.id || "")).toLowerCase();
+      if (t.match(/基本|概要|スペック|フロー/)) cat = "基本情報・スペック";
+      else if (t.match(/設定|判別|推測|終了画面|トロフィー/)) cat = "設定判別・推測ポイント";
       else if (t.match(/天井|リセット|朝一|ヤメ時|やめどき/)) cat = "天井・リセット・朝一";
-      else if (t.match(/ボーナス|AT|ST|特化|ラッシュ|BB|ドライブ|ジャッジ/i)) cat = "ボーナス・AT関連";
-      else if (t.match(/演出|フリーズ|示唆|アイキャッチ/)) cat = "演出関連";
-      else if (t.match(/通常|CZ|ポイント|周期|ステージ|メーター/)) cat = "通常関連";
+      else if (t.match(/ボーナス|at|st|特化|ラッシュ|bb|ドライブ|ジャッジ|上乗せ/)) cat = "ボーナス・AT関連";
+      else if (t.match(/演出|フリーズ|示唆|ボイス|アイキャッチ/)) cat = "演出関連";
+      else if (t.match(/通常|cz|ポイント|周期|ステージ|メーター/)) cat = "通常関連";
       else cat = "基本情報・スペック";
     }
-    
+
     if (groupedSections[cat]) {
       groupedSections[cat].push(s);
     } else {
@@ -134,7 +135,7 @@ export default function AnalysisSections({ data }: { data: AnalysisData }) {
   return (
     // 🌟 全体のレイアウト：PCは横並び（左サイドバー、右コンテンツ）
     <div className="mt-8 px-2 md:px-4 pb-8 flex flex-col md:flex-row gap-6 items-start relative max-w-[1400px] mx-auto">
-      
+
       {/* 📱 スマホ用：上部のアコーディオンナビ */}
       <nav className="md:hidden w-full z-10 mb-4">
         <div className="bg-[#1a1a1a] text-center font-bold text-white text-sm py-2 rounded-t-lg tracking-widest border-b-2 border-red-600">
@@ -163,7 +164,7 @@ export default function AnalysisSections({ data }: { data: AnalysisData }) {
                 <span className="w-1.5 h-5 bg-red-500 mr-3 rounded-sm"></span>
                 {s.title}
               </div>
-              
+
               <div className="bg-white p-4 md:p-6 border-x border-b border-gray-200 shadow-sm rounded-b-md relative">
                 {s.items ? (
                   // 🌟 ここがポイント！ 2列（grid）をやめて、縦1列（space-y-8）でドカンと見せる
@@ -172,7 +173,7 @@ export default function AnalysisSections({ data }: { data: AnalysisData }) {
                       <div key={i} className="flex flex-col bg-gray-50 p-5 rounded-lg border border-gray-100 shadow-sm">
                         {item.title && <h4 className="font-bold text-red-700 mb-3 border-b border-red-100 pb-2 text-base md:text-lg">{item.title}</h4>}
                         {item.text && <p className="text-sm md:text-base text-gray-800 flex-grow whitespace-pre-wrap leading-relaxed mb-4">{item.text}</p>}
-                        
+
                         {/* 🌟 テーブル描画 */}
                         {item.table && (
                           <div className="overflow-x-auto w-full mb-4 rounded border border-gray-300">
@@ -185,21 +186,31 @@ export default function AnalysisSections({ data }: { data: AnalysisData }) {
                                 </tr>
                               </thead>
                               <tbody>
-                                {item.table.rows.map((row, j) => (
-                                  <tr key={j} className={j % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                                    {row.map((cell, k) => (
-                                      <td key={k} className="p-3 border border-gray-200">{cell}</td>
-                                    ))}
-                                  </tr>
-                                ))}
+                                {(() => {
+                                  const rows = typeof item.table.rows === 'string'
+                                    ? JSON.parse(item.table.rows)
+                                    : item.table.rows;
+                                  return (rows as string[][]).map((row, j) => (
+                                    <tr key={j} className={j % 2 === 0 ? "bg-white text-gray-800" : "bg-gray-50 text-gray-800"}>
+                                      {row.map((cell, k) => (
+                                        <td key={k} className={`p-3 border border-gray-200 ${cell.includes('（赤色）') ? 'text-red-600 font-bold' :
+                                            cell.includes('（黄色）') ? 'text-yellow-600 font-bold' :
+                                              cell.includes('（紫色）') ? 'text-purple-600 font-bold' :
+                                                ''
+                                          }`}>
+                                          {cell.replace(/（赤色）|（黄色）|（紫色）/g, '')}
+                                        </td>
+                                      ))}
+                                    </tr>
+                                  ));
+                                })()}
                               </tbody>
                             </table>
                           </div>
                         )}
 
                         {item.img && (
-                          // 🌟 画像も1列に合わせて大きく表示（aspect-videoで16:9をキープ）
-                          <div className="mt-2 rounded-md overflow-hidden border border-gray-200 relative w-full aspect-video bg-white shadow-sm max-w-4xl mx-auto">
+                          <div className={`mt-2 rounded-md overflow-hidden border border-gray-200 relative w-full ${item.title === 'リール配列' ? 'aspect-[1/2.5] max-w-[350px] md:max-w-[450px]' : 'aspect-video max-w-4xl'} bg-white shadow-sm mx-auto`}>
                             {item.img.startsWith('http') || item.img.startsWith('/') ? (
                               <Image src={item.img} alt="" fill className="object-contain" loading="lazy" unoptimized />
                             ) : (
@@ -214,12 +225,12 @@ export default function AnalysisSections({ data }: { data: AnalysisData }) {
                   <div className="text-sm md:text-base text-gray-800 leading-relaxed whitespace-pre-wrap w-full">
                     <p>{s.content}</p>
                     {s.img && (
-                      <div className="mt-6 rounded-md overflow-hidden relative w-full aspect-video max-w-4xl mx-auto shadow-sm border border-gray-200">
-                         {s.img.startsWith('http') || s.img.startsWith('/') ? (
-                            <Image src={s.img} alt={s.title} fill className="object-contain" loading="lazy" unoptimized />
-                          ) : (
-                            <div className="flex items-center justify-center h-full bg-gray-200 text-red-500 text-xs break-all p-2">{s.img}</div>
-                          )}
+                      <div className={`mt-6 rounded-md overflow-hidden relative w-full ${s.title === 'リール配列' ? 'aspect-[1/2.5] max-w-[350px] md:max-w-[450px]' : 'aspect-video max-w-4xl'} mx-auto shadow-sm border border-gray-200`}>
+                        {s.img.startsWith('http') || s.img.startsWith('/') ? (
+                          <Image src={s.img} alt={s.title} fill className="object-contain" loading="lazy" unoptimized />
+                        ) : (
+                          <div className="flex items-center justify-center h-full bg-gray-200 text-red-500 text-xs break-all p-2">{s.img}</div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -233,14 +244,13 @@ export default function AnalysisSections({ data }: { data: AnalysisData }) {
       {/* 🔝 ページTOPへ戻るボタン */}
       <button
         onClick={scrollToTop}
-        className={`fixed bottom-10 right-10 z-50 p-4 bg-red-700 text-white rounded-lg shadow-2xl transition-all duration-300 flex flex-col items-center justify-center gap-1 hover:bg-red-600 active:scale-95 ${
-          showTopBtn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"
-        }`}
+        className={`fixed bottom-10 right-10 z-50 p-4 bg-red-700 text-white rounded-lg shadow-2xl transition-all duration-300 flex flex-col items-center justify-center gap-1 hover:bg-red-600 active:scale-95 ${showTopBtn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"
+          }`}
       >
         <span className="text-xl">▲</span>
         <span className="text-[10px] font-bold">TOP</span>
       </button>
-      
+
     </div>
   );
 }
