@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "import-data": "npx tsx scripts/import-machine.ts"
+    "import-data": "npx tsx scripts/import-machine.ts",
+    "optimize-videos": "npx tsx scripts/optimize-videos.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1009.0",
