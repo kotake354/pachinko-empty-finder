@@ -5,7 +5,7 @@ import { db, auth } from "@/lib/firebase";
 import { collection, onSnapshot, query, orderBy, where, getDocs, deleteDoc, doc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import Link from "next/link";
-import VideoPlayer from "@/components/VideoPlayer";
+import FeedVideo from "@/components/FeedVideo";
 
 
 export default function PostsPage() {
@@ -203,12 +203,8 @@ export default function PostsPage() {
                                                     style={{ maxWidth: '300px' }}
                                                 >
                                                     <div className="aspect-video w-full">
-                                                        <VideoPlayer
+                                                        <FeedVideo
                                                             src={currentMediaUrl}
-                                                            controls={false}
-                                                            autoPlay={true}
-                                                            muted={true}
-                                                            loop={true}
                                                             className="rounded-lg"
                                                         />
                                                     </div>

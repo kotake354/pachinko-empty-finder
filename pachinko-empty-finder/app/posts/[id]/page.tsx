@@ -7,6 +7,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import VideoPlayer from "@/components/VideoPlayer";
+import FeedVideo from "@/components/FeedVideo";
 
 
 export default function PostDetail() {
@@ -429,13 +430,7 @@ export default function PostDetail() {
                                 className="aspect-video w-full max-w-xl mx-auto"
                                 style={{ maxWidth: '36rem' }} // max-w-xl is 36rem
                             >
-                                <VideoPlayer
-                                    src={postMediaUrl}
-                                    controls={true}
-                                    autoPlay={true}
-                                    muted={true}
-                                    loop={true}
-                                />
+                                <FeedVideo src={postMediaUrl} />
                             </div>
                         )}
                     </div>
