@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, orderBy, limit } from "firebase/firestore";
 import Link from "next/link";
+import FeedVideo from "@/components/FeedVideo";
 
 // Worker のメディア配信URL（末尾スラッシュを正規化）
 const workerUrl = process.env.NEXT_PUBLIC_WORKER_URL || "";
@@ -17,21 +18,27 @@ const isImageFile = (fileName: string, mediaType?: string) => {
   );
 };
 
-export default function LatestPosts() {
+type Props = {
+  // 並び順: createdAt（最新）または likes（人気）
+  orderField?: "createdAt" | "likes";
+  emptyText?: string;
+};
+
+export default function PostFeed({ orderField = "createdAt", emptyText }: Props) {
   const [posts, setPosts] = useState<any[]>([]);
 
   useEffect(() => {
-    const q = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(6));
+    const q = query(collection(db, "posts"), orderBy(orderField, "desc"), limit(6));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setPosts(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     });
     return () => unsubscribe();
-  }, []);
+  }, [orderField]);
 
   if (posts.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-zinc-600 bg-zinc-800/40 p-10 text-center text-sm text-zinc-400">
-        まだ投稿がありません。最初の空き台情報を投稿してみましょう。
+        {emptyText ?? "まだ投稿がありません。"}
       </div>
     );
   }
@@ -59,10 +66,7 @@ export default function LatestPosts() {
                     loading="lazy"
                   />
                 ) : (
-                  <div className="flex flex-col items-center gap-1 text-zinc-500">
-                    <span className="text-2xl">▶</span>
-                    <span className="text-[10px] font-bold tracking-widest">動画</span>
-                  </div>
+                  <FeedVideo src={mediaUrl} />
                 )
               ) : (
                 <span className="text-xs font-bold italic text-zinc-700">NO MEDIA</span>
@@ -75,6 +79,9 @@ export default function LatestPosts() {
                     {post.type}
                   </span>
                 )}
+                <span className="flex items-center gap-1 text-[11px] font-bold text-pink-300">
+                  👍 {post.likes || 0}
+                </span>
                 {post.createdAt && (
                   <span className="ml-auto font-mono text-[10px] text-zinc-500">
                     {new Date(post.createdAt.seconds * 1000).toLocaleDateString("ja-JP", {

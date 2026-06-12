@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getAllMachines } from "@/lib/firebase/getMachine";
-import LatestPosts from "@/components/home/LatestPosts";
+import PostFeed from "@/components/home/PostFeed";
 
 export const revalidate = 3600; // 1時間ごとに再生成
 
@@ -90,6 +90,20 @@ export default async function Home() {
           ))}
         </section>
 
+        {/* ===== 人気投稿 ===== */}
+        <section>
+          <div className="mb-5 flex items-end justify-between">
+            <h2 className="flex items-center gap-2 text-xl font-bold">
+              <span className="h-5 w-1 rounded bg-pink-400 shadow-[0_0_8px_rgba(244,114,182,0.8)]" />
+              人気の投稿
+            </h2>
+            <Link href="/posts" className="text-xs font-bold text-pink-300 hover:underline">
+              すべて見る →
+            </Link>
+          </div>
+          <PostFeed orderField="likes" emptyText="まだ人気の投稿がありません。いいねが付くとここに表示されます。" />
+        </section>
+
         {/* ===== 最新投稿 ===== */}
         <section>
           <div className="mb-5 flex items-end justify-between">
@@ -101,7 +115,7 @@ export default async function Home() {
               すべて見る →
             </Link>
           </div>
-          <LatestPosts />
+          <PostFeed orderField="createdAt" />
         </section>
 
         {/* ===== 人気・新着機種 ===== */}
