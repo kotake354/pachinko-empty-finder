@@ -90,35 +90,7 @@ export default async function Home() {
           ))}
         </section>
 
-        {/* ===== 人気投稿 ===== */}
-        <section>
-          <div className="mb-5 flex items-end justify-between">
-            <h2 className="flex items-center gap-2 text-xl font-bold">
-              <span className="h-5 w-1 rounded bg-pink-400 shadow-[0_0_8px_rgba(244,114,182,0.8)]" />
-              人気の投稿
-            </h2>
-            <Link href="/posts" className="text-xs font-bold text-pink-300 hover:underline">
-              すべて見る →
-            </Link>
-          </div>
-          <PostFeed orderField="likes" emptyText="まだ人気の投稿がありません。いいねが付くとここに表示されます。" />
-        </section>
-
-        {/* ===== 最新投稿 ===== */}
-        <section>
-          <div className="mb-5 flex items-end justify-between">
-            <h2 className="flex items-center gap-2 text-xl font-bold">
-              <span className="h-5 w-1 rounded bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
-              最新の投稿
-            </h2>
-            <Link href="/posts" className="text-xs font-bold text-cyan-300 hover:underline">
-              すべて見る →
-            </Link>
-          </div>
-          <PostFeed orderField="createdAt" />
-        </section>
-
-        {/* ===== 人気・新着機種 ===== */}
+        {/* ===== 新着・注目の機種 ===== */}
         <section>
           <div className="mb-5 flex items-end justify-between">
             <h2 className="flex items-center gap-2 text-xl font-bold">
@@ -164,6 +136,34 @@ export default async function Home() {
               機種データが登録されていません。
             </div>
           )}
+        </section>
+
+        {/* ===== 人気投稿 ===== */}
+        <section>
+          <div className="mb-5 flex items-end justify-between">
+            <h2 className="flex items-center gap-2 text-xl font-bold">
+              <span className="h-5 w-1 rounded bg-pink-400 shadow-[0_0_8px_rgba(244,114,182,0.8)]" />
+              人気の投稿
+            </h2>
+            <Link href="/posts" className="text-xs font-bold text-pink-300 hover:underline">
+              すべて見る →
+            </Link>
+          </div>
+          <PostFeed orderField="likes" emptyText="まだ人気の投稿がありません。いいねが付くとここに表示されます。" />
+        </section>
+
+        {/* ===== 最新投稿 ===== */}
+        <section>
+          <div className="mb-5 flex items-end justify-between">
+            <h2 className="flex items-center gap-2 text-xl font-bold">
+              <span className="h-5 w-1 rounded bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+              最新の投稿
+            </h2>
+            <Link href="/posts" className="text-xs font-bold text-cyan-300 hover:underline">
+              すべて見る →
+            </Link>
+          </div>
+          <PostFeed orderField="createdAt" />
         </section>
       </div>
     </div>
