@@ -1,8 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
-import { collection, onSnapshot, query, orderBy, limit } from "firebase/firestore";
+import { db, auth } from "@/lib/firebase";
+import {
+  collection,
+  onSnapshot,
+  query,
+  orderBy,
+  limit,
+  doc,
+  updateDoc,
+  increment,
+  arrayUnion,
+  arrayRemove,
+} from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 import Link from "next/link";
 import FeedVideo from "@/components/FeedVideo";
 
@@ -26,14 +38,36 @@ type Props = {
 
 export default function PostFeed({ orderField = "createdAt", emptyText }: Props) {
   const [posts, setPosts] = useState<any[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      setCurrentUserId(user ? user.uid : null);
+    });
     const q = query(collection(db, "posts"), orderBy(orderField, "desc"), limit(6));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setPosts(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     });
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      unsubscribe();
+    };
   }, [orderField]);
+
+  // カードのリンク遷移を止めて、いいねをトグルする（onSnapshotで自動反映）
+  const handleLike = async (e: React.MouseEvent, post: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!currentUserId) {
+      alert("いいねするにはログインが必要です");
+      return;
+    }
+    const isLiked = post.likedBy?.includes(currentUserId);
+    await updateDoc(doc(db, "posts", post.id), {
+      likes: increment(isLiked ? -1 : 1),
+      likedBy: isLiked ? arrayRemove(currentUserId) : arrayUnion(currentUserId),
+    });
+  };
 
   if (posts.length === 0) {
     return (
@@ -79,9 +113,18 @@ export default function PostFeed({ orderField = "createdAt", emptyText }: Props)
                     {post.type}
                   </span>
                 )}
-                <span className="flex items-center gap-1 text-[11px] font-bold text-pink-300">
-                  👍 {post.likes || 0}
-                </span>
+                <button
+                  onClick={(e) => handleLike(e, post)}
+                  title="いいね"
+                  className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold transition-all ${
+                    post.likedBy?.includes(currentUserId)
+                      ? "bg-pink-500/20 text-pink-300 ring-1 ring-pink-500/40"
+                      : "text-zinc-400 hover:text-pink-300"
+                  }`}
+                >
+                  <span>👍</span>
+                  <span>{post.likes || 0}</span>
+                </button>
                 {post.createdAt && (
                   <span className="ml-auto font-mono text-[10px] text-zinc-500">
                     {new Date(post.createdAt.seconds * 1000).toLocaleDateString("ja-JP", {
