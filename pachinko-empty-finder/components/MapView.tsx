@@ -29,29 +29,45 @@ const defaultIcon = L.icon({
 // フォールバックの中心（東京駅）
 const fallbackCenter: [number, number] = [35.681236, 139.767125];
 
-export default function MapView() {
-  const [halls, setHalls] = useState<Hall[]>([]);
+interface MapViewProps {
+  halls?: Hall[]; // 指定時はその店舗だけ表示（未指定なら全店舗をFirestoreから取得）
+  center?: [number, number];
+  zoom?: number;
+  height?: string;
+}
+
+export default function MapView({
+  halls: hallsProp,
+  center: centerProp,
+  zoom: zoomProp,
+  height = "500px",
+}: MapViewProps = {}) {
+  const [fetchedHalls, setFetchedHalls] = useState<Hall[]>([]);
 
   useEffect(() => {
-    getAllHalls().then(setHalls);
-  }, []);
+    if (!hallsProp) getAllHalls().then(setFetchedHalls);
+  }, [hallsProp]);
 
-  // 店舗がある場合は中心を平均座標に合わせる
+  const halls = hallsProp ?? fetchedHalls;
+
+  // 中心：指定があればそれ、なければ店舗の平均座標（無ければ東京駅）
   const center: [number, number] =
-    halls.length > 0
+    centerProp ??
+    (halls.length > 0
       ? [
           halls.reduce((s, h) => s + h.lat, 0) / halls.length,
           halls.reduce((s, h) => s + h.lng, 0) / halls.length,
         ]
-      : fallbackCenter;
+      : fallbackCenter);
+  const zoom = zoomProp ?? (halls.length > 0 ? 10 : 12);
 
   return (
     <MapContainer
-      key={halls.length} // 店舗読み込み後に中心を反映する
+      key={`${halls.length}-${center[0]}`} // 店舗読み込み後に中心を反映する
       center={center}
-      zoom={halls.length > 0 ? 10 : 12}
+      zoom={zoom}
       scrollWheelZoom
-      style={{ width: "100%", height: "500px" }}
+      style={{ width: "100%", height }}
     >
       {/* OpenStreetMap タイル（APIキー不要・無料） */}
       <TileLayer

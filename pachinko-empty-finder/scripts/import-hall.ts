@@ -30,11 +30,11 @@ const HALLS: {
   lng: number;
   address?: string;
 }[] = [
-  { slug: "maruhan-kashiwa", name: "マルハン柏店", prefecture: "千葉県", area: "柏", lat: 35.8623, lng: 139.9707 },
-  { slug: "dynam-kashiwa", name: "ダイナム柏店", prefecture: "千葉県", area: "柏", lat: 35.8801, lng: 139.9612 },
-  { slug: "gaia-funabashi", name: "ガイア船橋店", prefecture: "千葉県", area: "船橋", lat: 35.6947, lng: 139.9826 },
-  { slug: "maruhan-shinjuku", name: "マルハン新宿東宝ビル店", prefecture: "東京都", area: "新宿", lat: 35.6955, lng: 139.7005 },
-  { slug: "espace-akihabara", name: "エスパス日拓秋葉原駅前店", prefecture: "東京都", area: "千代田", lat: 35.6983, lng: 139.7731 },
+  { slug: "maruhan-kashiwa", name: "マルハン柏店", prefecture: "千葉県", area: "柏", lat: 35.8623, lng: 139.9707, address: "末広町1-1" },
+  { slug: "dynam-kashiwa", name: "ダイナム柏店", prefecture: "千葉県", area: "柏", lat: 35.8801, lng: 139.9612, address: "豊四季" },
+  { slug: "gaia-funabashi", name: "ガイア船橋店", prefecture: "千葉県", area: "船橋", lat: 35.6947, lng: 139.9826, address: "本町7" },
+  { slug: "maruhan-shinjuku", name: "マルハン新宿東宝ビル店", prefecture: "東京都", area: "新宿", lat: 35.6955, lng: 139.7005, address: "歌舞伎町1-19-1" },
+  { slug: "espace-akihabara", name: "エスパス日拓秋葉原駅前店", prefecture: "東京都", area: "千代田", lat: 35.6983, lng: 139.7731, address: "外神田1-15-5" },
 ];
 
 (async () => {
