@@ -19,7 +19,15 @@ export default async function AreaPage() {
           ← ホームに戻る
         </Link>
 
-        <h1 className="mb-6 text-2xl font-black text-red-600">店舗データベース</h1>
+        <div className="mb-6 flex items-end justify-between">
+          <h1 className="text-2xl font-black text-red-600">店舗データベース</h1>
+          <Link
+            href="/owner/login"
+            className="rounded border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100"
+          >
+            🏪 店舗オーナーの方（掲載・編集）
+          </Link>
+        </div>
 
         <NationwideSearch halls={halls} />
 

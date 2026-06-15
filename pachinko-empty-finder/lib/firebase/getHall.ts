@@ -11,6 +11,7 @@ export interface Hall {
   lat: number;
   lng: number;
   address?: string;
+  ownerId?: string; // 店舗オーナー（自主掲載）のUID。管理者シードは未設定
 }
 
 /** 全店舗を取得する（地図のピン表示などに使用） */
@@ -32,6 +33,18 @@ export async function getHallsByPrefecture(prefecture: string): Promise<Hall[]> 
     return snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as Hall[];
   } catch (error) {
     console.error("Error fetching halls by prefecture:", error);
+    return [];
+  }
+}
+
+/** オーナー（店舗アカウント）が管理する店舗を取得する */
+export async function getHallsByOwner(ownerId: string): Promise<Hall[]> {
+  try {
+    const q = query(collection(db, "halls"), where("ownerId", "==", ownerId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as Hall[];
+  } catch (error) {
+    console.error("Error fetching halls by owner:", error);
     return [];
   }
 }
