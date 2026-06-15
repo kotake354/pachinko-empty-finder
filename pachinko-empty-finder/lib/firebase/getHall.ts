@@ -1,5 +1,5 @@
 import { db } from "../firebase";
-import { doc, getDoc, collection, getDocs } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 
 // 店舗（ホール）のデータ型。位置情報は lat / lng に統一する。
 export interface Hall {
@@ -20,6 +20,18 @@ export async function getAllHalls(): Promise<Hall[]> {
     return snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as Hall[];
   } catch (error) {
     console.error("Error fetching halls:", error);
+    return [];
+  }
+}
+
+/** 都道府県（正式名）で店舗を取得する。例: "千葉県" */
+export async function getHallsByPrefecture(prefecture: string): Promise<Hall[]> {
+  try {
+    const q = query(collection(db, "halls"), where("prefecture", "==", prefecture));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as Hall[];
+  } catch (error) {
+    console.error("Error fetching halls by prefecture:", error);
     return [];
   }
 }
