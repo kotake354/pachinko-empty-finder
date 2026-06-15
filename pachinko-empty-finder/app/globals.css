@@ -24,3 +24,19 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* 店舗情報の縦方向オートスクロール（リストを2連結して半分まで動かすとループ） */
+@keyframes vscroll {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+.animate-vscroll {
+  animation: vscroll 18s linear infinite;
+}
+.animate-vscroll:hover {
+  animation-play-state: paused;
+}
