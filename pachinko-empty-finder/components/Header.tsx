@@ -19,9 +19,6 @@ export default function Header() {
                     <Link href="/area" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">
                         エリア検索
                     </Link>
-                    <Link href="/hall" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">
-                        ホール検索
-                    </Link>
                     <Link href="/post" className="text-sm font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all shadow-sm">
                         投稿する
                     </Link>

@@ -15,14 +15,6 @@ const searchCards = [
     accent: "text-cyan-300",
   },
   {
-    href: "/hall",
-    title: "ホールから探す",
-    desc: "店舗ごとの稼働・空き台状況",
-    icon: "🏬",
-    glow: "hover:border-fuchsia-400/60 hover:shadow-[0_0_24px_-6px_rgba(232,121,249,0.5)]",
-    accent: "text-fuchsia-300",
-  },
-  {
     href: "/machine",
     title: "機種から探す",
     desc: "スペック・解析・演出情報",
@@ -76,7 +68,7 @@ export default async function Home() {
 
       <div className="mx-auto max-w-6xl space-y-14 px-6 py-14">
         {/* ===== 検索導線カード ===== */}
-        <section className="grid gap-4 sm:grid-cols-3">
+        <section className="grid gap-4 sm:grid-cols-2">
           {searchCards.map((card) => (
             <Link
               key={card.href}
