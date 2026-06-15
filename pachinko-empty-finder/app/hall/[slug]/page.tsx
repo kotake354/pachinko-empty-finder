@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 import { getHallData } from "@/lib/firebase/getHall";
 import HallMap from "@/components/area/HallMap";
+import HallPosts from "@/components/area/HallPosts";
 
 export const revalidate = 300;
 
@@ -88,15 +89,14 @@ export default async function HallDetailPage({
         <section className="overflow-hidden rounded-lg border border-gray-200 bg-white">
           <div className="flex items-center justify-between bg-red-700 px-4 py-2 text-sm font-bold text-white">
             <span>この店舗の投稿</span>
-            <Link href="/post" className="rounded bg-white/20 px-2 py-0.5 text-xs hover:bg-white/30">
+            <Link
+              href={`/post?hall=${hall.slug}`}
+              className="rounded bg-white/20 px-2 py-0.5 text-xs hover:bg-white/30"
+            >
               投稿する
             </Link>
           </div>
-          <div className="p-8 text-center text-sm text-gray-400">
-            この店舗に紐づく投稿はまだありません。
-            <br />
-            <span className="text-xs">（投稿と店舗の紐付けは今後対応予定です）</span>
-          </div>
+          <HallPosts hallId={hall.slug} />
         </section>
 
         <div>

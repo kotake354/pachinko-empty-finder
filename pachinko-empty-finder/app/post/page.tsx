@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { db, auth } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { getAllHalls, type Hall } from "@/lib/firebase/getHall";
 import Link from 'next/link';
 
 const POST_TYPES = ["据え置き", "イベント", "回収", "爆出し", "今日どうだった", "明日どうする", "暇つぶし"];
@@ -11,6 +12,17 @@ export default function PostPage() {
     const [machine, setMachine] = useState("");
     const [comment, setComment] = useState("");
     const [selectedType, setSelectedType] = useState("据え置き");
+
+    // 店舗選択（任意）
+    const [halls, setHalls] = useState<Hall[]>([]);
+    const [hallId, setHallId] = useState("");
+
+    useEffect(() => {
+        getAllHalls().then(setHalls);
+        // 店舗ページの「投稿する」から来た場合は ?hall=slug で初期選択
+        const preset = new URLSearchParams(window.location.search).get("hall");
+        if (preset) setHallId(preset);
+    }, []);
 
     // 動画アップロード用のState
     const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -110,10 +122,14 @@ export default function PostPage() {
                 throw new Error("ログインユーザーが見つかりません。ページを再読み込みしてください。");
             }
 
+            const selectedHall = halls.find((h) => h.slug === hallId);
+
             await addDoc(collection(db, "posts"), {
                 machine,
                 comment,
                 type: selectedType,
+                hallId: hallId || null, // 店舗未選択なら null
+                hallName: selectedHall?.name || null,
                 videoFileName: videoFileName || null, // 動画・画像がない場合は null
                 mediaType: videoFile?.type.startsWith('image/') ? 'image' : videoFile?.type.startsWith('video/') ? 'video' : null,
                 createdAt: serverTimestamp(),
@@ -126,6 +142,7 @@ export default function PostPage() {
             setMachine("");
             setComment("");
             setSelectedType("据え置き");
+            setHallId("");
             setVideoFile(null);
             setUploadProgress(0);
 
@@ -190,6 +207,26 @@ export default function PostPage() {
                         </div>
                     </div>
 
+
+                    {/* 店舗選択（任意） */}
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            店舗（任意）
+                        </label>
+                        <select
+                            value={hallId}
+                            onChange={(e) => setHallId(e.target.value)}
+                            disabled={isUploading}
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-gray-50"
+                        >
+                            <option value="">店舗を選択しない</option>
+                            {halls.map((h) => (
+                                <option key={h.id} value={h.slug}>
+                                    {h.name}（{h.prefecture}{h.area}）
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
                     {/* 機種名 */}
                     <div>
