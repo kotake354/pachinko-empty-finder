@@ -55,6 +55,13 @@ export default async function HallDetailPage({
       </div>
 
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
+        <Link
+          href="/area"
+          className="inline-flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50"
+        >
+          ← 店舗データベースに戻る
+        </Link>
+
         {/* 店舗情報 */}
         <section className="overflow-hidden rounded-lg border border-gray-200 bg-white">
           <div className="bg-gray-700 px-4 py-2 text-sm font-bold text-white">店舗情報</div>

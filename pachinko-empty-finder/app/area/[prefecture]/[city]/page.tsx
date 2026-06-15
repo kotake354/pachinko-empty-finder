@@ -42,6 +42,13 @@ export default async function CityPage({
       </div>
 
       <div className="mx-auto max-w-5xl px-4 py-6">
+        <Link
+          href="/area"
+          className="mb-4 inline-flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50"
+        >
+          ← 店舗データベースに戻る
+        </Link>
+
         <div className="mb-3 flex items-center justify-between bg-red-700 px-3 py-2 text-sm font-bold text-white">
           <span>店舗一覧</span>
           <span>{halls.length} 店舗</span>

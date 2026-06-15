@@ -1,6 +1,7 @@
 import Link from "next/link";
 import JapanMap from "@/components/area/JapanMap";
 import AutoScrollHalls from "@/components/area/AutoScrollHalls";
+import NationwideSearch from "@/components/area/NationwideSearch";
 import { getAllHalls } from "@/lib/firebase/getHall";
 
 export const revalidate = 300;
@@ -11,7 +12,16 @@ export default async function AreaPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-5xl px-4 py-8">
+        <Link
+          href="/"
+          className="mb-4 inline-flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50"
+        >
+          ← ホームに戻る
+        </Link>
+
         <h1 className="mb-6 text-2xl font-black text-red-600">店舗データベース</h1>
+
+        <NationwideSearch halls={halls} />
 
         <div className="grid gap-8 md:grid-cols-2">
           {/* 左：登録店舗リスト */}

@@ -47,6 +47,13 @@ export default function PrefectureView({
       </div>
 
       <div className="mx-auto max-w-5xl px-4 py-6">
+        <Link
+          href="/area"
+          className="mb-4 inline-flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50"
+        >
+          ← 店舗データベースに戻る
+        </Link>
+
         {/* 集計 */}
         <div className="mb-6 flex flex-wrap gap-2 text-sm">
           <span className="rounded border border-gray-300 bg-white px-3 py-1.5">
