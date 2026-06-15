@@ -17,24 +17,33 @@ const isImageFile = (fileName: string, mediaType?: string) => {
   );
 };
 
-export default function HallPosts({ hallId }: { hallId: string }) {
+// 指定フィールド（hallId / machineId）で投稿を絞り込んで表示する共通リスト。
+// 並べ替えはJS側で行う（複合インデックス不要）。
+export default function FilteredPosts({
+  field,
+  value,
+  emptyText,
+}: {
+  field: "hallId" | "machineId";
+  value: string;
+  emptyText?: string;
+}) {
   const [posts, setPosts] = useState<any[]>([]);
 
   useEffect(() => {
-    // hallId で絞り込み（並べ替えはJS側＝複合インデックス不要）
-    const q = query(collection(db, "posts"), where("hallId", "==", hallId));
+    const q = query(collection(db, "posts"), where(field, "==", value));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
       data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
       setPosts(data);
     });
     return () => unsubscribe();
-  }, [hallId]);
+  }, [field, value]);
 
   if (posts.length === 0) {
     return (
       <div className="p-8 text-center text-sm text-gray-400">
-        この店舗の投稿はまだありません。
+        {emptyText ?? "投稿はまだありません。"}
       </div>
     );
   }

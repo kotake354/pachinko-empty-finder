@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { db, auth } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { getAllHalls, type Hall } from "@/lib/firebase/getHall";
+import { getAllMachines, type Machine } from "@/lib/firebase/getMachine";
 import Link from 'next/link';
 
 const POST_TYPES = ["据え置き", "イベント", "回収", "爆出し", "今日どうだった", "明日どうする", "暇つぶし"];
@@ -13,15 +14,21 @@ export default function PostPage() {
     const [comment, setComment] = useState("");
     const [selectedType, setSelectedType] = useState("据え置き");
 
-    // 店舗選択（任意）
+    // 店舗・機種選択（任意）
     const [halls, setHalls] = useState<Hall[]>([]);
     const [hallId, setHallId] = useState("");
+    const [machines, setMachines] = useState<Machine[]>([]);
+    const [machineId, setMachineId] = useState("");
 
     useEffect(() => {
         getAllHalls().then(setHalls);
-        // 店舗ページの「投稿する」から来た場合は ?hall=slug で初期選択
-        const preset = new URLSearchParams(window.location.search).get("hall");
-        if (preset) setHallId(preset);
+        getAllMachines(100).then(setMachines);
+        // 店舗/機種ページの「投稿する」から来た場合は ?hall= / ?machine= で初期選択
+        const params = new URLSearchParams(window.location.search);
+        const presetHall = params.get("hall");
+        const presetMachine = params.get("machine");
+        if (presetHall) setHallId(presetHall);
+        if (presetMachine) setMachineId(presetMachine);
     }, []);
 
     // 動画アップロード用のState
@@ -123,6 +130,7 @@ export default function PostPage() {
             }
 
             const selectedHall = halls.find((h) => h.slug === hallId);
+            const selectedMachine = machines.find((m) => m.id === machineId);
 
             await addDoc(collection(db, "posts"), {
                 machine,
@@ -130,6 +138,8 @@ export default function PostPage() {
                 type: selectedType,
                 hallId: hallId || null, // 店舗未選択なら null
                 hallName: selectedHall?.name || null,
+                machineId: machineId || null, // 機種未選択なら null
+                machineName: selectedMachine?.name || null,
                 videoFileName: videoFileName || null, // 動画・画像がない場合は null
                 mediaType: videoFile?.type.startsWith('image/') ? 'image' : videoFile?.type.startsWith('video/') ? 'video' : null,
                 createdAt: serverTimestamp(),
@@ -143,6 +153,7 @@ export default function PostPage() {
             setComment("");
             setSelectedType("据え置き");
             setHallId("");
+            setMachineId("");
             setVideoFile(null);
             setUploadProgress(0);
 
@@ -223,6 +234,26 @@ export default function PostPage() {
                             {halls.map((h) => (
                                 <option key={h.id} value={h.slug}>
                                     {h.name}（{h.prefecture}{h.area}）
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* 機種選択（任意） */}
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            機種を選ぶ（任意）
+                        </label>
+                        <select
+                            value={machineId}
+                            onChange={(e) => setMachineId(e.target.value)}
+                            disabled={isUploading}
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-gray-50"
+                        >
+                            <option value="">機種を選択しない</option>
+                            {machines.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                    {m.name}
                                 </option>
                             ))}
                         </select>

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 import { getHallData } from "@/lib/firebase/getHall";
 import HallMap from "@/components/area/HallMap";
-import HallPosts from "@/components/area/HallPosts";
+import FilteredPosts from "@/components/posts/FilteredPosts";
 
 export const revalidate = 300;
 
@@ -96,7 +96,11 @@ export default async function HallDetailPage({
               投稿する
             </Link>
           </div>
-          <HallPosts hallId={hall.slug} />
+          <FilteredPosts
+            field="hallId"
+            value={hall.slug}
+            emptyText="この店舗の投稿はまだありません。"
+          />
         </section>
 
         <div>
