@@ -91,7 +91,7 @@ export default function PrefectureView({
               <span>{filtered.length} 店舗</span>
             </div>
             {filtered.length > 0 ? (
-              <ul className="divide-y divide-gray-100 rounded-b border border-gray-200 bg-white">
+              <ul className="max-h-96 divide-y divide-gray-100 overflow-y-auto rounded-b border border-gray-200 bg-white">
                 {filtered.map((hall) => (
                   <li key={hall.id}>
                     <Link

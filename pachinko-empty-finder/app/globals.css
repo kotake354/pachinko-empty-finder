@@ -25,18 +25,10 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* 店舗情報の縦方向オートスクロール（リストを2連結して半分まで動かすとループ） */
-@keyframes vscroll {
-  from {
-    transform: translateY(0);
+/* スクロール可能だがスクロールバーは非表示にする（Tailwind v4 の @utility で定義） */
+@utility no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  &::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
   }
-  to {
-    transform: translateY(-50%);
-  }
-}
-.animate-vscroll {
-  animation: vscroll 18s linear infinite;
-}
-.animate-vscroll:hover {
-  animation-play-state: paused;
 }
