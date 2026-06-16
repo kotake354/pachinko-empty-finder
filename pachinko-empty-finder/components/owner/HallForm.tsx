@@ -9,6 +9,10 @@ import type { Hall } from "@/lib/firebase/getHall";
 
 const PREF_LIST = Object.values(PREFECTURES_INFO);
 
+// Worker のメディア配信URL（既存画像のプレビュー用）
+const workerUrl = process.env.NEXT_PUBLIC_WORKER_URL || "";
+const mediaBase = workerUrl.endsWith("/") ? workerUrl.slice(0, -1) : workerUrl;
+
 const field =
   "w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200";
 const labelCls = "mb-1 block text-sm font-semibold text-gray-700";
@@ -38,9 +42,40 @@ export default function HallForm({ ownerId, hall }: { ownerId: string; hall?: Ha
   const [description, setDescription] = useState(hall?.description ?? "");
   const [websiteUrl, setWebsiteUrl] = useState(hall?.websiteUrl ?? "");
   const [snsUrl, setSnsUrl] = useState(hall?.snsUrl ?? "");
+  // 画像
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const currentImageUrl =
+    hall?.imageFileName && mediaBase ? `${mediaBase}/?file=${hall.imageFileName}` : null;
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setImageFile(file);
+    setPreviewUrl(file ? URL.createObjectURL(file) : null);
+  };
+
+  // 画像をR2へアップロードし、保存するファイル名を返す
+  const uploadImage = async (file: File): Promise<string> => {
+    const contentType = file.type || "application/octet-stream";
+    const res = await fetch("/api/upload-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fileName: file.name, contentType }),
+    });
+    if (!res.ok) throw new Error("画像アップロードURLの取得に失敗しました。");
+    const { uploadUrl, fileName } = await res.json();
+    const put = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": contentType },
+      body: file,
+    });
+    if (!put.ok) throw new Error("画像のアップロードに失敗しました。");
+    return fileName as string;
+  };
 
   const numOrNull = (v: string) => {
     const n = parseInt(v, 10);
@@ -60,29 +95,43 @@ export default function HallForm({ ownerId, hall }: { ownerId: string; hall?: Ha
       return;
     }
 
-    const data = {
-      name: name.trim(),
-      prefecture,
-      area: area.trim(),
-      address: address.trim() || null,
-      lat: latN,
-      lng: lngN,
-      openTime: openTime.trim() || null,
-      closeTime: closeTime.trim() || null,
-      holiday: holiday.trim() || null,
-      phone: phone.trim() || null,
-      pachinkoCount: numOrNull(pachinkoCount),
-      slotCount: numOrNull(slotCount),
-      parking: parking || null,
-      nearestStation: nearestStation.trim() || null,
-      description: description.trim() || null,
-      websiteUrl: websiteUrl.trim() || null,
-      snsUrl: snsUrl.trim() || null,
-    };
-
     setSaving(true);
     setError("");
     try {
+      // 画像が選ばれていればR2へアップロードし、古い画像は削除
+      let imageFileName: string | null = hall?.imageFileName ?? null;
+      if (imageFile) {
+        imageFileName = await uploadImage(imageFile);
+        if (hall?.imageFileName) {
+          fetch("/api/delete-media", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fileName: hall.imageFileName }),
+          }).catch(() => {});
+        }
+      }
+
+      const data = {
+        name: name.trim(),
+        prefecture,
+        area: area.trim(),
+        address: address.trim() || null,
+        lat: latN,
+        lng: lngN,
+        openTime: openTime.trim() || null,
+        closeTime: closeTime.trim() || null,
+        holiday: holiday.trim() || null,
+        phone: phone.trim() || null,
+        pachinkoCount: numOrNull(pachinkoCount),
+        slotCount: numOrNull(slotCount),
+        parking: parking || null,
+        nearestStation: nearestStation.trim() || null,
+        description: description.trim() || null,
+        websiteUrl: websiteUrl.trim() || null,
+        snsUrl: snsUrl.trim() || null,
+        imageFileName,
+      };
+
       if (isEdit && hall) {
         await updateDoc(doc(db, "halls", hall.id), data);
       } else {
@@ -229,6 +278,30 @@ export default function HallForm({ ownerId, hall }: { ownerId: string; hall?: Ha
           <label className={labelCls}>SNS URL（X / Instagram など）</label>
           <input value={snsUrl} onChange={(e) => setSnsUrl(e.target.value)} disabled={saving} className={field} placeholder="https://x.com/..." inputMode="url" />
         </div>
+      </section>
+
+      {/* 店舗画像 */}
+      <section className="space-y-3">
+        <h2 className="border-b border-gray-200 pb-1 text-sm font-bold text-gray-500">
+          店舗画像（外観）
+        </h2>
+        {(previewUrl || currentImageUrl) && (
+          <img
+            src={previewUrl || currentImageUrl || ""}
+            alt="店舗画像プレビュー"
+            className="max-h-48 w-full rounded-lg border border-gray-200 object-contain"
+          />
+        )}
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          disabled={saving}
+          className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:font-bold file:text-blue-700 hover:file:bg-blue-100"
+        />
+        <p className="text-xs text-gray-400">
+          ※ 外観写真をアップロードできます（保存時に反映）。新しい画像を選ぶと差し替わります。
+        </p>
       </section>
 
       <div className="flex flex-wrap gap-3 pt-2">

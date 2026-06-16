@@ -26,6 +26,15 @@ export interface Hall {
   description?: string; // 紹介文（自由テキスト）
   websiteUrl?: string;
   snsUrl?: string;
+  // --- 画像 ---
+  imageFileName?: string; // 外観写真（R2のファイル名）。Worker経由で配信
+}
+
+// 店舗画像（外観）のURLを返す。未設定なら null。
+const _workerUrl = process.env.NEXT_PUBLIC_WORKER_URL || "";
+const _mediaBase = _workerUrl.endsWith("/") ? _workerUrl.slice(0, -1) : _workerUrl;
+export function hallImageUrl(hall: Pick<Hall, "imageFileName">): string | null {
+  return hall.imageFileName && _mediaBase ? `${_mediaBase}/?file=${hall.imageFileName}` : null;
 }
 
 /** 全店舗を取得する（地図のピン表示などに使用） */

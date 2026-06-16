@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import type { Hall } from "@/lib/firebase/getHall";
+import { hallImageUrl, type Hall } from "@/lib/firebase/getHall";
 
 // 全国の店舗を横断検索（店名・住所・地域・都道府県）
 export default function NationwideSearch({ halls }: { halls: Hall[] }) {
@@ -48,9 +48,18 @@ export default function NationwideSearch({ halls }: { halls: Hall[] }) {
                     href={`/hall/${hall.slug}`}
                     className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-red-50/40"
                   >
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded bg-gray-100 text-[9px] font-bold italic text-gray-400">
-                      NO IMG
-                    </div>
+                    {hallImageUrl(hall) ? (
+                      <img
+                        src={hallImageUrl(hall)!}
+                        alt={hall.name}
+                        className="h-10 w-10 flex-shrink-0 rounded object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded bg-gray-100 text-[9px] font-bold italic text-gray-400">
+                        NO IMG
+                      </div>
+                    )}
                     <div className="min-w-0">
                       <div className="truncate font-bold text-red-700">{hall.name}</div>
                       <div className="text-xs text-gray-500">

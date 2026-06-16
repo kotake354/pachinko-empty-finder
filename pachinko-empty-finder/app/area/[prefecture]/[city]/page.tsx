@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getPrefectureBySlug } from "@/lib/prefectures";
-import { getHallsByPrefecture } from "@/lib/firebase/getHall";
+import { getHallsByPrefecture, hallImageUrl } from "@/lib/firebase/getHall";
 
 export const revalidate = 300;
 
@@ -62,9 +62,18 @@ export default async function CityPage({
                   href={`/hall/${hall.slug}`}
                   className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-red-50/40"
                 >
-                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded bg-gray-100 text-[9px] font-bold italic text-gray-400">
-                    NO IMG
-                  </div>
+                  {hallImageUrl(hall) ? (
+                    <img
+                      src={hallImageUrl(hall)!}
+                      alt={hall.name}
+                      className="h-12 w-12 flex-shrink-0 rounded object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded bg-gray-100 text-[9px] font-bold italic text-gray-400">
+                      NO IMG
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <div className="truncate font-bold text-red-700">{hall.name}</div>
                     <div className="text-xs text-gray-500">

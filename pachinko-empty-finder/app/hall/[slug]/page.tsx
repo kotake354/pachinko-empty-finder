@@ -60,6 +60,12 @@ export default async function HallDetailPage({
   if (hall.parking) infoRows.push({ label: "駐車場", value: hall.parking });
   if (hall.nearestStation) infoRows.push({ label: "アクセス", value: hall.nearestStation });
 
+  // 外観写真（R2 / Worker 経由）
+  const workerUrl = process.env.NEXT_PUBLIC_WORKER_URL || "";
+  const mediaBase = workerUrl.endsWith("/") ? workerUrl.slice(0, -1) : workerUrl;
+  const imageUrl =
+    hall.imageFileName && mediaBase ? `${mediaBase}/?file=${hall.imageFileName}` : null;
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ヘッダー */}
@@ -85,6 +91,15 @@ export default async function HallDetailPage({
         >
           ← 店舗データベースに戻る
         </Link>
+
+        {/* 外観写真 */}
+        {imageUrl && (
+          <img
+            src={imageUrl}
+            alt={`${hall.name}の外観`}
+            className="max-h-72 w-full rounded-lg border border-gray-200 bg-white object-contain"
+          />
+        )}
 
         {/* 店舗情報 */}
         <section className="overflow-hidden rounded-lg border border-gray-200 bg-white">
