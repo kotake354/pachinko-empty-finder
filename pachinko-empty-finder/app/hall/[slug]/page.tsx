@@ -36,6 +36,30 @@ export default async function HallDetailPage({
     mapsQuery
   )}`;
 
+  // 店舗情報の行を組み立て（値があるものだけ表示）
+  const infoRows: { label: string; value: string }[] = [];
+  if (hall.openTime || hall.closeTime) {
+    infoRows.push({
+      label: "営業時間",
+      value: `${hall.openTime ?? ""}${hall.openTime && hall.closeTime ? " 〜 " : ""}${hall.closeTime ?? ""}`,
+    });
+  }
+  if (hall.holiday) infoRows.push({ label: "定休日", value: hall.holiday });
+  if (hall.phone) infoRows.push({ label: "電話番号", value: hall.phone });
+  if (hall.pachinkoCount != null || hall.slotCount != null) {
+    infoRows.push({
+      label: "台数",
+      value: [
+        hall.pachinkoCount != null ? `パチンコ ${hall.pachinkoCount}台` : null,
+        hall.slotCount != null ? `スロット ${hall.slotCount}台` : null,
+      ]
+        .filter(Boolean)
+        .join(" / "),
+    });
+  }
+  if (hall.parking) infoRows.push({ label: "駐車場", value: hall.parking });
+  if (hall.nearestStation) infoRows.push({ label: "アクセス", value: hall.nearestStation });
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ヘッダー */}
@@ -83,8 +107,52 @@ export default async function HallDetailPage({
                 </a>
               </dd>
             </div>
+            {infoRows.map((row) => (
+              <div key={row.label} className="flex px-4 py-3">
+                <dt className="w-24 flex-shrink-0 font-bold text-gray-500">{row.label}</dt>
+                <dd className="text-gray-800">{row.value}</dd>
+              </div>
+            ))}
           </dl>
         </section>
+
+        {/* 店舗紹介・リンク */}
+        {(hall.description || hall.websiteUrl || hall.snsUrl) && (
+          <section className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+            <div className="bg-gray-700 px-4 py-2 text-sm font-bold text-white">店舗紹介</div>
+            <div className="space-y-4 p-4">
+              {hall.description && (
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
+                  {hall.description}
+                </p>
+              )}
+              {(hall.websiteUrl || hall.snsUrl) && (
+                <div className="flex flex-wrap gap-3">
+                  {hall.websiteUrl && (
+                    <a
+                      href={hall.websiteUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded border border-gray-300 px-3 py-1.5 text-sm font-bold text-blue-600 hover:bg-blue-50"
+                    >
+                      🌐 公式サイト
+                    </a>
+                  )}
+                  {hall.snsUrl && (
+                    <a
+                      href={hall.snsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded border border-gray-300 px-3 py-1.5 text-sm font-bold text-blue-600 hover:bg-blue-50"
+                    >
+                      🔗 SNS
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* 地図 */}
         <section className="overflow-hidden rounded-lg border border-gray-200 bg-white">

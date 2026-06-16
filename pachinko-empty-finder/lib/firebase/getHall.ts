@@ -12,6 +12,20 @@ export interface Hall {
   lng: number;
   address?: string;
   ownerId?: string; // 店舗オーナー（自主掲載）のUID。管理者シードは未設定
+  // --- 営業情報 ---
+  openTime?: string; // 例: 10:00
+  closeTime?: string; // 例: 22:45
+  holiday?: string; // 例: 年中無休 / 第3水曜
+  phone?: string;
+  // --- 設備・アクセス ---
+  pachinkoCount?: number; // パチンコ台数
+  slotCount?: number; // スロット台数
+  parking?: string; // あり / なし / 提携あり など
+  nearestStation?: string; // 最寄り駅
+  // --- 紹介・リンク ---
+  description?: string; // 紹介文（自由テキスト）
+  websiteUrl?: string;
+  snsUrl?: string;
 }
 
 /** 全店舗を取得する（地図のピン表示などに使用） */
