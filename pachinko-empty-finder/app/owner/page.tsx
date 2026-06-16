@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, deleteDoc } from "firebase/firestore";
 import { getHallsByOwner, type Hall } from "@/lib/firebase/getHall";
 import Link from "next/link";
 
@@ -30,6 +31,17 @@ export default function OwnerDashboard() {
   const handleLogout = async () => {
     await signOut(auth);
     router.replace("/owner/login");
+  };
+
+  const handleDelete = async (hall: Hall) => {
+    if (!confirm(`「${hall.name}」を削除しますか？\nこの操作は取り消せません。`)) return;
+    try {
+      await deleteDoc(doc(db, "halls", hall.id));
+      setHalls((prev) => prev.filter((h) => h.id !== hall.id));
+    } catch (error) {
+      console.error("Error deleting hall:", error);
+      alert("削除に失敗しました。もう一度お試しください。");
+    }
   };
 
   if (loading) {
@@ -87,6 +99,12 @@ export default function OwnerDashboard() {
                 >
                   編集
                 </Link>
+                <button
+                  onClick={() => handleDelete(hall)}
+                  className="rounded bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100"
+                >
+                  削除
+                </button>
               </li>
             ))}
           </ul>
