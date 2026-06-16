@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { doc, collection, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { PREFECTURES_INFO } from "@/lib/prefectures";
-import type { Hall } from "@/lib/firebase/getHall";
+import { textColorFor, type Hall } from "@/lib/firebase/getHall";
 
 const PREF_LIST = Object.values(PREFECTURES_INFO);
 
@@ -45,6 +45,8 @@ export default function HallForm({ ownerId, hall }: { ownerId: string; hall?: Ha
   // 画像
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  // デザイン
+  const [themeColor, setThemeColor] = useState(hall?.themeColor ?? "#b91c1c");
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -130,6 +132,7 @@ export default function HallForm({ ownerId, hall }: { ownerId: string; hall?: Ha
         websiteUrl: websiteUrl.trim() || null,
         snsUrl: snsUrl.trim() || null,
         imageFileName,
+        themeColor: themeColor || null,
       };
 
       if (isEdit && hall) {
@@ -277,6 +280,35 @@ export default function HallForm({ ownerId, hall }: { ownerId: string; hall?: Ha
         <div>
           <label className={labelCls}>SNS URL（X / Instagram など）</label>
           <input value={snsUrl} onChange={(e) => setSnsUrl(e.target.value)} disabled={saving} className={field} placeholder="https://x.com/..." inputMode="url" />
+        </div>
+      </section>
+
+      {/* デザイン */}
+      <section className="space-y-3">
+        <h2 className="border-b border-gray-200 pb-1 text-sm font-bold text-gray-500">デザイン</h2>
+        <label className={labelCls}>ページの背景色（テーマカラー）</label>
+        <div className="flex items-center gap-3">
+          <input
+            type="color"
+            value={themeColor}
+            onChange={(e) => setThemeColor(e.target.value)}
+            disabled={saving}
+            className="h-10 w-16 cursor-pointer rounded border border-gray-200 bg-white"
+          />
+          <span className="font-mono text-sm text-gray-600">{themeColor}</span>
+          <button
+            type="button"
+            onClick={() => setThemeColor("#b91c1c")}
+            className="ml-auto rounded border border-gray-300 px-3 py-1 text-xs font-bold text-gray-500 hover:bg-gray-50"
+          >
+            既定に戻す
+          </button>
+        </div>
+        {/* プレビュー */}
+        <div className="flex items-center rounded-lg px-4 py-3" style={{ backgroundColor: themeColor }}>
+          <span className="font-black" style={{ color: textColorFor(themeColor) }}>
+            {name || "店名のプレビュー"}
+          </span>
         </div>
       </section>
 

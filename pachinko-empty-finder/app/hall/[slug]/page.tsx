@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Metadata } from "next";
-import { getHallData } from "@/lib/firebase/getHall";
+import { getHallData, textColorFor } from "@/lib/firebase/getHall";
 import HallMap from "@/components/area/HallMap";
 import FilteredPosts from "@/components/posts/FilteredPosts";
 
@@ -66,21 +66,27 @@ export default async function HallDetailPage({
   const imageUrl =
     hall.imageFileName && mediaBase ? `${mediaBase}/?file=${hall.imageFileName}` : null;
 
+  // テーマカラー（背景色）と、それに合う文字色
+  const theme = hall.themeColor || "#b91c1c";
+  const onTheme = textColorFor(theme);
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* ヘッダー */}
-      <div className="border-b-4 border-red-600 bg-white">
+      {/* ヘッダー（テーマカラー背景） */}
+      <div style={{ backgroundColor: theme }}>
         <div className="mx-auto max-w-4xl px-4 py-5">
-          <nav className="mb-1 text-xs text-gray-500">
+          <nav className="mb-1 text-xs" style={{ color: onTheme, opacity: 0.85 }}>
             <Link href="/area" className="hover:underline">
               全国
             </Link>
             {" > "}
-            <span className="text-gray-700">
+            <span>
               {hall.prefecture} {hall.area}
             </span>
           </nav>
-          <h1 className="text-2xl font-black text-gray-800">{hall.name}</h1>
+          <h1 className="text-2xl font-black" style={{ color: onTheme }}>
+            {hall.name}
+          </h1>
         </div>
       </div>
 
