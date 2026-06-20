@@ -17,7 +17,8 @@ interface Section {
   title: string;
   content?: string;
   img?: string;
-  items?: { title?: string; text?: string; img?: string; table?: TableData }[];
+  imgs?: string[];
+  items?: { title?: string; text?: string; img?: string; imgs?: string[]; table?: TableData }[];
   category?: string;
 }
 
@@ -57,8 +58,8 @@ export default function AnalysisSections({ data }: { data: AnalysisData }) {
   const categoryOrder = [
     "基本情報・スペック",
     "設定判別・推測ポイント",
-    "天井・リセット・朝一",
     "通常関連",
+    "天井・リセット・朝一",
     "ボーナス・AT関連",
     "演出関連"
   ];
@@ -169,7 +170,7 @@ export default function AnalysisSections({ data }: { data: AnalysisData }) {
                 {s.items ? (
                   // 🌟 ここがポイント！ 2列（grid）をやめて、縦1列（space-y-8）でドカンと見せる
                   <div className="space-y-8 w-full">
-                    {s.items.map((item, i) => (item.text || item.img || item.table) && (
+                    {s.items.map((item, i) => (item.text || item.img || item.imgs || item.table) && (
                       <div key={i} className="flex flex-col bg-gray-50 p-5 rounded-lg border border-gray-100 shadow-sm">
                         {item.title && <h4 className="font-bold text-red-700 mb-3 border-b border-red-100 pb-2 text-base md:text-lg">{item.title}</h4>}
                         {item.text && <p className="text-sm md:text-base text-gray-800 flex-grow whitespace-pre-wrap leading-relaxed mb-4">{item.text}</p>}
@@ -209,8 +210,20 @@ export default function AnalysisSections({ data }: { data: AnalysisData }) {
                           </div>
                         )}
 
+                        {item.imgs && item.imgs.length > 0 && (
+                          <div className={`grid grid-cols-1 ${item.imgs.length === 3 || item.title === 'BT中の停止形' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4 mt-2`}>
+                            {item.imgs.map((imgUrl, k) => (
+                              <div key={k} className="flex flex-col">
+                                <div className="rounded-md overflow-hidden border border-gray-200 relative aspect-video bg-white shadow-sm">
+                                  <Image src={imgUrl} alt="" fill className="object-contain" loading="lazy" unoptimized />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
                         {item.img && (
-                          <div className={`mt-2 rounded-md overflow-hidden border border-gray-200 relative w-full ${item.title === 'リール配列' ? 'aspect-[1/2.5] max-w-[350px] md:max-w-[450px]' : 'aspect-video max-w-4xl'} bg-white shadow-sm mx-auto`}>
+                          <div className={`mt-2 rounded-md overflow-hidden border border-gray-200 relative w-full ${(item.title === 'リール配列' || item.title === 'ゲームフロー') ? 'aspect-[1/2.7] max-w-[350px] md:max-w-[450px]' : 'aspect-video max-w-4xl'} bg-white shadow-sm mx-auto`}>
                             {item.img.startsWith('http') || item.img.startsWith('/') ? (
                               <Image src={item.img} alt="" fill className="object-contain" loading="lazy" unoptimized />
                             ) : (
@@ -224,8 +237,17 @@ export default function AnalysisSections({ data }: { data: AnalysisData }) {
                 ) : (
                   <div className="text-sm md:text-base text-gray-800 leading-relaxed whitespace-pre-wrap w-full">
                     <p>{s.content}</p>
+                    {s.imgs && s.imgs.length > 0 && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
+                        {s.imgs.map((imgUrl, k) => (
+                          <div key={k} className="rounded-md overflow-hidden relative aspect-video shadow-sm border border-gray-200">
+                            <Image src={imgUrl} alt={s.title} fill className="object-contain" loading="lazy" unoptimized />
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     {s.img && (
-                      <div className={`mt-6 rounded-md overflow-hidden relative w-full ${s.title === 'リール配列' ? 'aspect-[1/2.5] max-w-[350px] md:max-w-[450px]' : 'aspect-video max-w-4xl'} mx-auto shadow-sm border border-gray-200`}>
+                      <div className={`mt-6 rounded-md overflow-hidden relative w-full ${(s.title === 'リール配列' || s.title === 'ゲームフロー') ? 'aspect-[1/2.7] max-w-[350px] md:max-w-[450px]' : 'aspect-video max-w-4xl'} mx-auto shadow-sm border border-gray-200`}>
                         {s.img.startsWith('http') || s.img.startsWith('/') ? (
                           <Image src={s.img} alt={s.title} fill className="object-contain" loading="lazy" unoptimized />
                         ) : (
