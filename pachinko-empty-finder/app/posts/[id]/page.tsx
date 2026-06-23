@@ -458,6 +458,15 @@ export default function PostDetail() {
                             <span className={`text-xl transition-transform duration-200 flex-shrink-0 ${post?.likedBy?.includes(currentUserId) ? "animate-bounce" : "group-hover:scale-125"}`}>👍</span>
                             <span>{likes}</span>
                         </button>
+
+                        {/* 新規投稿ボタン（元投稿の店舗が分かれば引き継いで投稿フォームへ） */}
+                        <Link
+                            href={post.hallId ? `/post?hall=${post.hallId}` : "/post"}
+                            className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold shadow-md transition-all hover:from-blue-700 hover:to-indigo-700 active:scale-95"
+                        >
+                            <span className="text-lg flex-shrink-0">✏️</span>
+                            <span>{post.hallName ? "この店舗に投稿" : "投稿する"}</span>
+                        </Link>
                     </div>
                 </div>
             </div>

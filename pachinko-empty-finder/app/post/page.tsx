@@ -239,26 +239,6 @@ export default function PostPage() {
                         </select>
                     </div>
 
-                    {/* 機種選択（任意） */}
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            機種を選ぶ（任意）
-                        </label>
-                        <select
-                            value={machineId}
-                            onChange={(e) => setMachineId(e.target.value)}
-                            disabled={isUploading}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-gray-50"
-                        >
-                            <option value="">機種を選択しない</option>
-                            {machines.map((m) => (
-                                <option key={m.id} value={m.id}>
-                                    {m.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
                     {/* 機種名 */}
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -324,7 +304,7 @@ export default function PostPage() {
                     <button
                         onClick={handlePost}
                         disabled={isUploading}
-                        className="relative w-full py-4 mt-8 overflow-hidden rounded-xl shadow-lg transition-all active:scale-95 disabled:pointer-events-none group"
+                        className={`relative w-full py-4 mt-8 overflow-hidden rounded-xl shadow-lg transition-all active:scale-95 disabled:pointer-events-none ${isUploading ? 'bg-gray-200' : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'}`}
                     >
                         {/* プログレスバー背景 */}
                         {isUploading && (
@@ -333,9 +313,6 @@ export default function PostPage() {
                                 style={{ width: `${uploadProgress}%` }}
                             />
                         )}
-
-                        {/* 通常時の背景 */}
-                        <div className={`absolute top-0 left-0 w-full h-full -z-10 transition-colors duration-300 ${isUploading ? 'bg-gray-200' : 'bg-gradient-to-r from-blue-600 to-indigo-600 group-hover:from-blue-700 group-hover:to-indigo-700'}`} />
 
                         {/* テキストとアイコン */}
                         <div className={`relative z-10 flex justify-center items-center gap-2 font-bold ${isUploading ? 'text-gray-900' : 'text-white'}`}>
