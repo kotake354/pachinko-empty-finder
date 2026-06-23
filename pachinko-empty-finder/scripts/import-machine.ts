@@ -26,6 +26,9 @@ const db = getFirestore();
  * =============================================
  */
 const ISEKAI_R2 = "https://pub-34654406a54c41e7b17e18764789c1a5.r2.dev/isekaikarutetto";
+// 戦国乙女5の画像（一撃のホットリンク。next.configに images.1geki.jp 登録済み）
+const OTOME_R2 = "https://images.1geki.jp/machines/slot/l_otome5";
+const otomeImg = (n: string) => `${OTOME_R2}/l_otome5_${n}.png?f=webp`;
 
 const MACHINES_DATA: Record<string, any> = {
   "l-isekai-quartet": {
@@ -280,13 +283,52 @@ const MACHINES_DATA: Record<string, any> = {
       "全61曲の楽曲を搭載。カスタム機能で演出を自由にカスタマイズ可能"
     ],
     updateHistory: [
-      { date: "2026-06-08", text: "機種概要・スペック・注目ポイントを公開しました。" }
+      { date: "2026-06-08", text: "スペック・打ち方・解析・演出画像をまとめて公開しました。" }
     ],
     sections: [
       {
-        id: "1", title: "機種概要・スペック", items: [
+        id: "spec", title: "機種概要・スペック", category: "基本情報・スペック", items: [
           { title: "基本スペック（設定別）", table: { headers: ["設定", "AT初当り", "出玉率"], rows: [["1", "1/359.5", "97.9%"], ["2", "1/350.8", "98.9%"], ["3", "1/332.5", "101.0%"], ["4", "1/302.8", "106.2%"], ["5", "1/281.0", "111.1%"], ["6", "1/262.9", "114.9%"]] } },
-          { title: "ゲーム性", text: "戦国乙女シリーズ第5弾。新筐体「DIVE IN」を搭載し、通常時は直AT方式へ仕様変更。自力CZ「本能寺の変」やループ型上位AT「真強カワラッシュ」が出玉の核となる。" }
+          { title: "ゲーム性", text: "戦国乙女シリーズ第5弾。新筐体「DIVE IN」を搭載したスマスロ。通常時は規定ゲーム数（周期）抽選・CZ・フリーズの3ルートからメインAT「強カワラッシュ」を目指す。最大6周期到達でAT当選が濃厚。" }
+        ]
+      },
+      {
+        id: "flow", title: "ゲームフロー", category: "基本情報・スペック", items: [
+          { title: "ゲームフロー", text: "通常時からAT、上位ATまでの流れ。", img: otomeImg("flow") }
+        ]
+      },
+      {
+        id: "normal", title: "通常時のゲーム性", category: "通常関連", items: [
+          { title: "モード・周期", text: "通常時のモードは全5種類（A/B/C/チャンス/引き戻し）。AT終了後は引き戻しモードへ移行し、最大200G+αでの引き戻しに期待。規定周期到達時の前兆・ステージ移行が当選の鍵となる。" },
+          { title: "通常時の画面・ステージ例", imgs: [otomeImg("ekishou01"), otomeImg("ekishou02"), otomeImg("ekishou03"), otomeImg("ekishou04"), otomeImg("ekishou05"), otomeImg("ekishou07"), otomeImg("ekishou08"), otomeImg("ekishou09")] }
+        ]
+      },
+      {
+        id: "uchikata", title: "打ち方", category: "通常関連", items: [
+          { title: "通常時の打ち方", text: "左1st（左押し）での消化を推奨。左リールに黒BARを狙う。中押し・逆押しはペナルティが発生する場合あり。レア役は弱/強チェリー・スイカ・チャンス目・宿焔目など。", imgs: [otomeImg("uchikata01"), otomeImg("uchikata02"), otomeImg("uchikata03"), otomeImg("uchikata04"), otomeImg("uchikata05"), otomeImg("uchikata06"), otomeImg("uchikata07"), otomeImg("uchikata08"), otomeImg("uchikata09")] },
+          { title: "ボーナス・AT中の打ち方・停止形", text: "各停止形は下記画像を参照。", imgs: [otomeImg("uchikata10"), otomeImg("uchikata11"), otomeImg("uchikata12"), otomeImg("uchikata13"), otomeImg("uchikata14"), otomeImg("uchikata15"), otomeImg("uchikata16"), otomeImg("uchikata17")] }
+        ]
+      },
+      {
+        id: "setting", title: "設定判別・設定差", category: "設定判別・推測ポイント", items: [
+          { title: "設定差のポイント", text: "設定差は小役確率・AT初当り・各種示唆演出・終了画面などに存在。AT初当りは設定1で約1/359.5、設定6で約1/262.9と、高設定ほど軽くなる。" },
+          { title: "終了画面・示唆例", imgs: [otomeImg("ekishou98"), otomeImg("ekishou99"), otomeImg("ekishou100")] }
+        ]
+      },
+      {
+        id: "at", title: "AT・ボーナス（強カワラッシュ／真強カワラッシュ）", category: "ボーナス・AT関連", items: [
+          { title: "AT仕様", text: "メインAT「強カワラッシュ」は初期45G+α・純増約2.7枚/G。AT中のCZ「本能寺の変」成功で出陣ボーナスを獲得し、上位CZ「決戦ノ刻」勝利で上位AT「真強カワラッシュ」（初期100G・純増約4.8枚/G）へ。「剣聖チャンス」成功でループ濃厚。" },
+          { title: "AT中の画面例", imgs: [otomeImg("ekishou16"), otomeImg("ekishou17"), otomeImg("ekishou18"), otomeImg("ekishou19"), otomeImg("ekishou20"), otomeImg("ekishou21"), otomeImg("ekishou22"), otomeImg("ekishou26"), otomeImg("ekishou27"), otomeImg("ekishou32"), otomeImg("ekishou34")] }
+        ]
+      },
+      {
+        id: "enshutsu", title: "演出", category: "演出関連", items: [
+          { title: "演出・示唆例", text: "予告・リーチ・示唆演出の例。", imgs: [otomeImg("ekishou41"), otomeImg("ekishou43"), otomeImg("ekishou45"), otomeImg("ekishou46"), otomeImg("ekishou55"), otomeImg("ekishou59"), otomeImg("ekishou60"), otomeImg("ekishou81"), otomeImg("ekishou82"), otomeImg("ekishou84"), otomeImg("ekishou85"), otomeImg("ekishou86"), otomeImg("ekishou88"), otomeImg("ekishou108"), otomeImg("ekishou110")] }
+        ]
+      },
+      {
+        id: "ceiling", title: "天井・ヤメどき", category: "天井・リセット・朝一", items: [
+          { title: "天井・ヤメどき", text: "規定周期到達でのAT当選が実質的な天井の役割。ヤメ時はAT後の引き戻しモード（最大200G+α）を確認してから。詳細な天井ゲーム数・リセット時の挙動は今後追記。" }
         ]
       }
     ]
