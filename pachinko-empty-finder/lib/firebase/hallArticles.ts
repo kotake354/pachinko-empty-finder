@@ -1,13 +1,15 @@
 import { db } from "../firebase";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 
-export const ARTICLE_CATEGORIES = ["新台入替", "お知らせ", "イベント"] as const;
+export const ARTICLE_CATEGORIES = ["新台入替", "お知らせ"] as const;
 
 export interface HallArticle {
   id: string;
   title: string;
   body: string;
   category?: string;
+  imageFileName?: string | null; // 記事画像（R2のファイル名）。Worker経由で配信
+  videoFileName?: string | null; // 記事動画（R2のファイル名・1分以内）。Worker経由で配信
   createdAt?: string | null; // ISO文字列
 }
 

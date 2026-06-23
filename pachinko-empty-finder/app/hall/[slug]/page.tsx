@@ -209,6 +209,21 @@ export default async function HallDetailPage({
                   <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
                     {a.body}
                   </p>
+                  {a.imageFileName && mediaBase && (
+                    <img
+                      src={`${mediaBase}/?file=${a.imageFileName}`}
+                      alt=""
+                      className="mt-3 max-h-80 w-full rounded-lg border border-gray-200 object-contain"
+                    />
+                  )}
+                  {a.videoFileName && mediaBase && (
+                    <video
+                      src={`${mediaBase}/?file=${a.videoFileName}`}
+                      controls
+                      playsInline
+                      className="mt-3 max-h-96 w-full rounded-lg border border-gray-200 bg-black object-contain"
+                    />
+                  )}
                 </li>
               ))}
             </ul>
