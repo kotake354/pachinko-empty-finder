@@ -251,6 +251,45 @@ const MACHINES_DATA: Record<string, any> = {
         ]
       }
     ]
+  },
+  "l-sengoku-otome5": {
+    name: "L戦国乙女5 業火を穿つ宿焔の双刃",
+    maker: "OLYMPIA（オリンピア）",
+    releaseDate: "2026年6月8日",
+    modelName: "L戦国乙女5L8",
+    category: 'slot',
+    type: ["スマスロ", "ATタイプ", "天井"],
+    images: {
+      main: "https://images.1geki.jp/wp-content/uploads/2026/04/img_l_otome5.png",
+      reel: "https://images.1geki.jp/machines/slot/l_otome5/l_otome5_reel.png?f=webp",
+      paytable: "https://images.1geki.jp/wp-content/uploads/2026/04/l_otome5_haitou00.png"
+    },
+    payoutData: [
+      { label: "1", val1: "-", val2: "1/359.5", rate: "97.9%" },
+      { label: "2", val1: "-", val2: "1/350.8", rate: "98.9%" },
+      { label: "3", val1: "-", val2: "1/332.5", rate: "101.0%" },
+      { label: "4", val1: "-", val2: "1/302.8", rate: "106.2%" },
+      { label: "5", val1: "-", val2: "1/281.0", rate: "111.1%" },
+      { label: "6", val1: "-", val2: "1/262.9", rate: "114.9%" }
+    ],
+    features: [
+      "新筐体「DIVE IN」を搭載した戦国乙女4の正統後継機",
+      "通常時は直AT方式へ仕様変更。新規自力CZ「本能寺の変」を追加",
+      "上位AT「真強カワラッシュ」のループ性能に期待。「剣聖チャンス」成功でループ濃厚",
+      "新乙女キャラ「ユウサイ」「マサムネ」「石川ゴエモン」が参戦",
+      "全61曲の楽曲を搭載。カスタム機能で演出を自由にカスタマイズ可能"
+    ],
+    updateHistory: [
+      { date: "2026-06-08", text: "機種概要・スペック・注目ポイントを公開しました。" }
+    ],
+    sections: [
+      {
+        id: "1", title: "機種概要・スペック", items: [
+          { title: "基本スペック（設定別）", table: { headers: ["設定", "AT初当り", "出玉率"], rows: [["1", "1/359.5", "97.9%"], ["2", "1/350.8", "98.9%"], ["3", "1/332.5", "101.0%"], ["4", "1/302.8", "106.2%"], ["5", "1/281.0", "111.1%"], ["6", "1/262.9", "114.9%"]] } },
+          { title: "ゲーム性", text: "戦国乙女シリーズ第5弾。新筐体「DIVE IN」を搭載し、通常時は直AT方式へ仕様変更。自力CZ「本能寺の変」やループ型上位AT「真強カワラッシュ」が出玉の核となる。" }
+        ]
+      }
+    ]
   }
 };
 
