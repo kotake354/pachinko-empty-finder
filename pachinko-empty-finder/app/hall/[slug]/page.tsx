@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Metadata } from "next";
 import { getHallData, textColorFor } from "@/lib/firebase/getHall";
+import { getHallArticles } from "@/lib/firebase/hallArticles";
 import HallMap from "@/components/area/HallMap";
 import FilteredPosts from "@/components/posts/FilteredPosts";
 
@@ -29,6 +30,8 @@ export default async function HallDetailPage({
   const { slug } = await params;
   const hall = await getHallData(slug);
   if (!hall) notFound();
+
+  const articles = await getHallArticles(hall.id);
 
   // Googleマップを開くだけのURL（APIキー不要・無料）。店名＋住所で検索する。
   const mapsQuery = `${hall.name} ${hall.prefecture}${hall.area}${hall.address ?? ""}`;
@@ -181,7 +184,38 @@ export default async function HallDetailPage({
           <HallMap hall={hall} />
         </section>
 
-        {/* この店舗の投稿（投稿×店舗の紐付けは今後） */}
+        {/* 店舗ブログ／最新情報（オーナーが運用） */}
+        {articles.length > 0 && (
+          <section className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+            <div className="bg-gray-700 px-4 py-2 text-sm font-bold text-white">
+              店舗ブログ・最新情報
+            </div>
+            <ul className="divide-y divide-gray-100">
+              {articles.map((a) => (
+                <li key={a.id} className="p-4">
+                  <div className="mb-1 flex items-center gap-2">
+                    {a.category && (
+                      <span className="rounded bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700">
+                        {a.category}
+                      </span>
+                    )}
+                    <span className="text-xs text-gray-400">
+                      {a.createdAt
+                        ? new Date(a.createdAt).toLocaleDateString("ja-JP")
+                        : ""}
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-gray-900">{a.title}</h3>
+                  <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
+                    {a.body}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* この店舗の投稿（一般ユーザーの来店レポート） */}
         <section className="overflow-hidden rounded-lg border border-gray-200 bg-white">
           <div className="flex items-center justify-between bg-red-700 px-4 py-2 text-sm font-bold text-white">
             <span>この店舗の投稿</span>

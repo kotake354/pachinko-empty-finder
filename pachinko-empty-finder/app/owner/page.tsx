@@ -99,6 +99,12 @@ export default function OwnerDashboard() {
                 >
                   編集
                 </Link>
+                <Link
+                  href={`/owner/hall/${hall.id}/blog`}
+                  className="rounded bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-100"
+                >
+                  ブログ
+                </Link>
                 <button
                   onClick={() => handleDelete(hall)}
                   className="rounded bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100"

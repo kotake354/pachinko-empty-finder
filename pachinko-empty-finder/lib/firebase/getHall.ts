@@ -30,6 +30,21 @@ export interface Hall {
   imageFileName?: string; // 外観写真（R2のファイル名）。Worker経由で配信
   // --- デザイン ---
   themeColor?: string; // ページ上部ヘッダーの背景色（HEX 例: #b91c1c）
+  createdAt?: string | null; // 作成日時（ISO文字列。Timestampは渡せないため変換）
+}
+
+// FirestoreドキュメントをHallへ変換。createdAt(Timestamp)を文字列化する
+// （Server Component → Client Component に Timestamp を渡すとシリアライズエラーになる）
+function toHall(id: string, data: any): Hall {
+  return {
+    id,
+    ...data,
+    createdAt: data?.createdAt?.toDate
+      ? data.createdAt.toDate().toISOString()
+      : typeof data?.createdAt === "string"
+        ? data.createdAt
+        : null,
+  } as Hall;
 }
 
 // 店舗画像（外観）のURLを返す。未設定なら null。
@@ -54,7 +69,7 @@ export function textColorFor(hex?: string): string {
 export async function getAllHalls(): Promise<Hall[]> {
   try {
     const snapshot = await getDocs(collection(db, "halls"));
-    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as Hall[];
+    return snapshot.docs.map((d) => toHall(d.id, d.data()));
   } catch (error) {
     console.error("Error fetching halls:", error);
     return [];
@@ -66,7 +81,7 @@ export async function getHallsByPrefecture(prefecture: string): Promise<Hall[]> 
   try {
     const q = query(collection(db, "halls"), where("prefecture", "==", prefecture));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as Hall[];
+    return snapshot.docs.map((d) => toHall(d.id, d.data()));
   } catch (error) {
     console.error("Error fetching halls by prefecture:", error);
     return [];
@@ -78,7 +93,7 @@ export async function getHallsByOwner(ownerId: string): Promise<Hall[]> {
   try {
     const q = query(collection(db, "halls"), where("ownerId", "==", ownerId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as Hall[];
+    return snapshot.docs.map((d) => toHall(d.id, d.data()));
   } catch (error) {
     console.error("Error fetching halls by owner:", error);
     return [];
@@ -90,7 +105,7 @@ export async function getHallData(slug: string): Promise<Hall | null> {
   try {
     const snap = await getDoc(doc(db, "halls", slug));
     if (!snap.exists()) return null;
-    return { id: snap.id, ...snap.data() } as Hall;
+    return toHall(snap.id, snap.data());
   } catch (error) {
     console.error("Error fetching hall data:", error);
     return null;
